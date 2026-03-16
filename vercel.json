@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/internal/history/sync-worker",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/internal/finance-sync-worker",
+      "schedule": "*/15 * * * *"
+    }
+  ]
+}
