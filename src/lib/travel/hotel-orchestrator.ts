@@ -8,12 +8,55 @@ import type { UnifiedHotelResult, HotelSearchConfig, HotelDashboardResults } fro
 import { searchSerpApiHotels } from "./hotel-search-client"
 import { searchRoameHotels, matchRoameHotel, type RoameHotelMatch } from "./roame-hotel-client"
 import { searchATFHotels, atfBrandToProgram, type ATFHotelMatch } from "./atf-hotel-client"
+import { searchRoameLocation, searchRoameHotelsLive, roameProgramLabel, type RoameLiveHotel } from "./roame-hotel-graphql"
 
 // ─── Credentials ────────────────────────────────────────────────
 
 export interface HotelSearchCredentials {
   serpApiKey: string | null
   atfApiKey: string | null
+}
+
+// ─── Response Cache ─────────────────────────────────────────────
+
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+const responseCache = new Map<string, { data: HotelDashboardResults; expiry: number }>()
+
+function getCacheKey(config: HotelSearchConfig): string {
+  return `hotel:${config.query}:${config.checkInDate}:${config.checkOutDate}:${config.adults}`
+}
+
+// ─── Roame Live → Unified ───────────────────────────────────────
+
+function roameLiveToUnified(hotel: RoameLiveHotel): UnifiedHotelResult {
+  const d = hotel.hotelDetail
+  const summary = hotel.offerSummary
+  const bestRoom = hotel.availableRooms[0]
+  const bestOffer = bestRoom?.offerPeriods[0]
+
+  return {
+    id: `hotel-roame-${d.id}`,
+    name: d.name,
+    description: d.description || "",
+    location: [d.city, d.stateProvince, d.country].filter(Boolean).join(", "),
+    hotelClass: parseInt(d.category) || 0,
+    overallRating: 0,
+    reviews: 0,
+    amenities: [],
+    images: d.previewImg ? [d.previewImg] : [],
+    cashPerNight: summary.cashPriceUsd > 0 ? summary.cashPriceUsd : null,
+    cashTotal: null,
+    currency: "USD",
+    bookingLinks: d.url ? [{ source: roameProgramLabel(d.mileageProgram), link: d.url, rate: summary.cashPriceUsd }] : [],
+    pointsPerNight: summary.awardPoints > 0 ? summary.awardPoints : null,
+    pointsProgram: roameProgramLabel(d.mileageProgram),
+    brand: d.brand,
+    subBrand: null,
+    hotelCode: d.id,
+    sources: ["roame"],
+    // Extra data from live search
+    ...(summary.cpp > 0 ? {} : {}), // cpp available as summary.cpp if needed later
+  }
 }
 
 // ─── Matching ───────────────────────────────────────────────────
@@ -92,6 +135,59 @@ function mergePointsData(
   })
 }
 
+// ─── Merge Live Roame with SerpAPI ──────────────────────────────
+
+function mergeLiveWithSerpApi(
+  liveHotels: UnifiedHotelResult[],
+  serpApiHotels: UnifiedHotelResult[],
+  atfHotels: ATFHotelMatch[],
+): UnifiedHotelResult[] {
+  const merged = liveHotels.map((hotel) => {
+    const result = { ...hotel }
+
+    // Try to find SerpAPI match for reviews, ratings, amenities, extra images
+    const serpMatch = serpApiHotels.find((s) => {
+      const a = normalizeForMatch(hotel.name)
+      const b = normalizeForMatch(s.name)
+      return a.includes(b) || b.includes(a)
+    })
+
+    if (serpMatch) {
+      if (serpMatch.overallRating > 0) result.overallRating = serpMatch.overallRating
+      if (serpMatch.reviews > 0) result.reviews = serpMatch.reviews
+      if (serpMatch.amenities.length > 0) result.amenities = serpMatch.amenities
+      if (serpMatch.images.length > result.images.length) result.images = serpMatch.images
+      if (!result.cashPerNight && serpMatch.cashPerNight) result.cashPerNight = serpMatch.cashPerNight
+      if (!result.cashTotal && serpMatch.cashTotal) result.cashTotal = serpMatch.cashTotal
+      if (serpMatch.bookingLinks.length > 0) {
+        result.bookingLinks = [...result.bookingLinks, ...serpMatch.bookingLinks]
+      }
+      if (!result.sources.includes("serpapi")) result.sources = [...result.sources, "serpapi"]
+    }
+
+    // ATF enrichment
+    const atfMatch = matchATFHotel(hotel.name, atfHotels)
+    if (atfMatch) {
+      if (!result.sources.includes("atf")) result.sources = [...result.sources, "atf"]
+    }
+
+    return result
+  })
+
+  // Add SerpAPI-only hotels that Roame didn't have (cash-only hotels)
+  const liveNames = new Set(merged.map((h) => normalizeForMatch(h.name)))
+  for (const serpHotel of serpApiHotels) {
+    const normalized = normalizeForMatch(serpHotel.name)
+    const alreadyExists = [...liveNames].some((n) => n.includes(normalized) || normalized.includes(n))
+    if (!alreadyExists) {
+      merged.push(serpHotel)
+      liveNames.add(normalized)
+    }
+  }
+
+  return merged
+}
+
 // ─── Add Points-Only Hotels ─────────────────────────────────────
 
 function addPointsOnlyHotels(
@@ -152,11 +248,19 @@ export async function searchHotels(
   config: HotelSearchConfig,
   credentials: HotelSearchCredentials,
 ): Promise<HotelDashboardResults> {
+  // Check cache
+  const cacheKey = getCacheKey(config)
+  const cached = responseCache.get(cacheKey)
+  if (cached && Date.now() < cached.expiry) {
+    return cached.data
+  }
+
   const sources: string[] = []
   const promises: Promise<void>[] = []
 
   let serpApiResults: UnifiedHotelResult[] = []
-  let roameResults: RoameHotelMatch[] = []
+  let roameLiveResults: UnifiedHotelResult[] = []
+  let roameStaticResults: RoameHotelMatch[] = []
   let atfResults: ATFHotelMatch[] = []
 
   // SerpAPI (cash prices, images, reviews)
@@ -171,14 +275,25 @@ export async function searchHotels(
     )
   }
 
-  // Roame (points pricing from static hotel-data.json)
+  // Roame Live GraphQL (real-time points + cash + CPP + room types)
   promises.push(
-    searchRoameHotels(config.query)
-      .then((hotels) => {
-        roameResults = hotels
-        sources.push("roame")
-      })
-      .catch(() => { /* Roame failed — continue */ }),
+    (async () => {
+      const bounding = await searchRoameLocation(config.query)
+      if (!bounding) return
+      const { hotels } = await searchRoameHotelsLive(
+        bounding, config.checkInDate, config.checkOutDate,
+      )
+      roameLiveResults = hotels.map(roameLiveToUnified)
+      sources.push("roame")
+    })().catch(() => {
+      // Live failed — fall back to static hotel-data.json
+      return searchRoameHotels(config.query)
+        .then((hotels) => {
+          roameStaticResults = hotels
+          if (!sources.includes("roame")) sources.push("roame")
+        })
+        .catch(() => { /* Static also failed — continue */ })
+    }),
   )
 
   // ATF (brand info + availability)
@@ -195,14 +310,19 @@ export async function searchHotels(
 
   await Promise.all(promises)
 
-  // Merge: start with SerpAPI results, enrich with Roame + ATF points data
-  let merged = mergePointsData(serpApiResults, roameResults, atfResults)
+  let merged: UnifiedHotelResult[]
 
-  // Add points-only hotels that SerpAPI didn't find (up to 10 extra)
-  const existingNames = new Set(merged.map((h) => h.name))
-  merged = addPointsOnlyHotels(merged, roameResults, existingNames, 10)
+  if (roameLiveResults.length > 0) {
+    // Live Roame results are already complete — merge with SerpAPI for reviews/ratings
+    merged = mergeLiveWithSerpApi(roameLiveResults, serpApiResults, atfResults)
+  } else {
+    // Fallback: SerpAPI base + static Roame enrichment
+    merged = mergePointsData(serpApiResults, roameStaticResults, atfResults)
+    const existingNames = new Set(merged.map((h) => h.name))
+    merged = addPointsOnlyHotels(merged, roameStaticResults, existingNames, 10)
+  }
 
-  return {
+  const result: HotelDashboardResults = {
     meta: {
       query: config.query,
       checkIn: config.checkInDate,
@@ -213,4 +333,9 @@ export async function searchHotels(
     },
     hotels: merged,
   }
+
+  // Cache the result
+  responseCache.set(cacheKey, { data: result, expiry: Date.now() + CACHE_TTL_MS })
+
+  return result
 }

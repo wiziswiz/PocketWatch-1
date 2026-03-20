@@ -33,6 +33,15 @@ interface SearchCredentials {
   atfApiKey?: string
 }
 
+// ─── Response Cache ─────────────────────────────────────────────
+
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+const responseCache = new Map<string, { data: DashboardResults; expiry: number }>()
+
+function getFlightCacheKey(config: SearchConfig): string {
+  return `flight:${config.origin}:${config.destination}:${config.departureDate}:${config.searchClass}`
+}
+
 // ─── Recommendation Engine ──────────────────────────────────────
 
 function generateRecommendations(
@@ -151,6 +160,14 @@ export async function runSearch(
   balances: PointsBalance[],
   onProgress?: (progress: SearchProgress) => void,
 ): Promise<DashboardResults> {
+  // Check cache
+  const cacheKey = getFlightCacheKey(config)
+  const cached = responseCache.get(cacheKey)
+  if (cached && Date.now() < cached.expiry) {
+    onProgress?.({ source: "cache", status: "complete", flights: cached.data.flights.length })
+    return { ...cached.data, balances }
+  }
+
   const completionPct: Record<string, number> = {}
   const allFlights: UnifiedFlightResult[] = []
 
@@ -239,7 +256,7 @@ export async function runSearch(
     description: s.description,
   }))
 
-  return {
+  const result: DashboardResults = {
     meta: {
       origin: config.origin,
       destination: config.destination,
@@ -255,4 +272,9 @@ export async function runSearch(
     routeSweetSpots,
     warnings,
   }
+
+  // Cache the result (balances may change so we re-attach on cache hit)
+  responseCache.set(cacheKey, { data: result, expiry: Date.now() + CACHE_TTL_MS })
+
+  return result
 }
