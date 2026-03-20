@@ -1,19 +1,34 @@
 "use client"
 
+import { useState, useCallback } from "react"
 import { useFlightSearch, useTravelBalances } from "@/hooks/travel"
 import { FlightSearchForm } from "@/components/travel/flight-search-form"
 import { FlightResults } from "@/components/travel/flight-results"
 import { RecommendationsPanel } from "@/components/travel/recommendations-panel"
 import { BalancesPanel } from "@/components/travel/balances-panel"
+import type { SearchConfig } from "@/types/travel"
 
 export default function TravelPage() {
   const { status, progress, results, error, search, isSearching, recentSearches } = useFlightSearch()
   const { data: balancesData } = useTravelBalances()
+  const [lastConfig, setLastConfig] = useState<SearchConfig | null>(null)
+
+  const handleSearch = useCallback((config: SearchConfig) => {
+    setLastConfig(config)
+    search(config)
+  }, [search])
+
+  const handleSearchCabin = useCallback((searchClass: string) => {
+    if (!lastConfig) return
+    const newConfig: SearchConfig = { ...lastConfig, searchClass: searchClass as SearchConfig["searchClass"] }
+    setLastConfig(newConfig)
+    search(newConfig)
+  }, [lastConfig, search])
 
   return (
     <div className="py-6 space-y-6">
       <FlightSearchForm
-        onSearch={search}
+        onSearch={handleSearch}
         isSearching={isSearching}
         progress={progress}
         recentSearches={recentSearches}
@@ -62,7 +77,7 @@ export default function TravelPage() {
             )}
 
             {/* Flight results */}
-            <FlightResults flights={results.flights} />
+            <FlightResults flights={results.flights} onSearchCabin={handleSearchCabin} />
           </div>
 
           {/* Sidebar */}

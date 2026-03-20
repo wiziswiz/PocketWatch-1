@@ -24,6 +24,8 @@ export async function GET(req: Request) {
   const destination = url.searchParams.get("destination")
   const date = url.searchParams.get("date")
   const searchClass = (url.searchParams.get("class") || "PREM") as SearchConfig["searchClass"]
+  const tripType = (url.searchParams.get("tripType") || "one_way") as SearchConfig["tripType"]
+  const returnDate = url.searchParams.get("returnDate") || undefined
 
   if (!origin || !destination || !date) {
     return apiError("T1002", "Missing required params: origin, destination, date", 400)
@@ -35,6 +37,10 @@ export async function GET(req: Request) {
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return apiError("T1004", "Date must be YYYY-MM-DD format", 400)
+  }
+
+  if (tripType === "round_trip" && (!returnDate || !/^\d{4}-\d{2}-\d{2}$/.test(returnDate))) {
+    return apiError("T1006", "Round-trip requires a valid return date (YYYY-MM-DD)", 400)
   }
 
   // Load credentials
@@ -110,7 +116,7 @@ export async function GET(req: Request) {
   })
   const balances = cardProfilesToBalances(cards)
 
-  const config: SearchConfig = { origin, destination, departureDate: date, searchClass }
+  const config: SearchConfig = { origin, destination, departureDate: date, searchClass, tripType, returnDate }
 
   // SSE stream
   const encoder = new TextEncoder()

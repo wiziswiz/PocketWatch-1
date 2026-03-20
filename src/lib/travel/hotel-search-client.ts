@@ -47,6 +47,8 @@ function parseProperty(prop: SerpApiHotelProperty, index: number): UnifiedHotelR
     brand: null,
     subBrand: null,
     hotelCode: null,
+    latitude: prop.gps_coordinates?.latitude ?? null,
+    longitude: prop.gps_coordinates?.longitude ?? null,
     sources: ["serpapi"],
   }
 }

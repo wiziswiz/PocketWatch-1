@@ -17,16 +17,21 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
   const [origin, setOrigin] = useState("")
   const [destination, setDestination] = useState("")
   const [date, setDate] = useState("")
+  const [returnDate, setReturnDate] = useState("")
   const [searchClass, setSearchClass] = useState<SearchConfig["searchClass"]>("PREM")
+  const [tripType, setTripType] = useState<"one_way" | "round_trip">("one_way")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!origin || !destination || !date) return
+    if (tripType === "round_trip" && !returnDate) return
     onSearch({
       origin: origin.toUpperCase(),
       destination: destination.toUpperCase(),
       departureDate: date,
       searchClass,
+      tripType,
+      ...(tripType === "round_trip" ? { returnDate } : {}),
     })
   }
 
@@ -35,11 +40,15 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
     setDestination(recent.destination)
     setDate(recent.date)
     setSearchClass(recent.searchClass)
+    setTripType(recent.tripType || "one_way")
+    setReturnDate(recent.returnDate || "")
     onSearch({
       origin: recent.origin,
       destination: recent.destination,
       departureDate: recent.date,
       searchClass: recent.searchClass,
+      tripType: recent.tripType || "one_way",
+      ...(recent.returnDate ? { returnDate: recent.returnDate } : {}),
     })
   }
 
@@ -56,7 +65,26 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
         <h2 className="text-sm font-bold text-foreground">Search Flights</h2>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* Trip type toggle */}
+      <div className="flex items-center gap-1 bg-background rounded-lg p-1 border border-card-border w-fit">
+        {(["one_way", "round_trip"] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTripType(t)}
+            className={cn(
+              "px-3 py-1 rounded-md text-xs font-medium transition-colors",
+              tripType === t
+                ? "bg-primary/10 text-primary"
+                : "text-foreground-muted hover:text-foreground"
+            )}
+          >
+            {t === "one_way" ? "One-way" : "Round-trip"}
+          </button>
+        ))}
+      </div>
+
+      <div className={cn("grid grid-cols-2 gap-3", tripType === "round_trip" ? "sm:grid-cols-5" : "sm:grid-cols-4")}>
         {/* Origin */}
         <div>
           <label className="text-[11px] text-foreground-muted font-medium uppercase tracking-wide mb-1 block">
@@ -89,10 +117,10 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
           />
         </div>
 
-        {/* Date */}
+        {/* Departure Date */}
         <div>
           <label className="text-[11px] text-foreground-muted font-medium uppercase tracking-wide mb-1 block">
-            Date
+            {tripType === "round_trip" ? "Depart" : "Date"}
           </label>
           <DatePicker
             value={date}
@@ -102,6 +130,22 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
             required
           />
         </div>
+
+        {/* Return Date (round-trip only) */}
+        {tripType === "round_trip" && (
+          <div>
+            <label className="text-[11px] text-foreground-muted font-medium uppercase tracking-wide mb-1 block">
+              Return
+            </label>
+            <DatePicker
+              value={returnDate}
+              onChange={setReturnDate}
+              min={date || new Date().toISOString().split("T")[0]}
+              placeholder="Return date"
+              required
+            />
+          </div>
+        )}
 
         {/* Class */}
         <div>
@@ -147,6 +191,7 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
           <span className="text-[11px] text-foreground-muted">Recent:</span>
           {recentSearches.slice(0, 5).map((recent, i) => {
             const classLabel = recent.searchClass === "ECON" ? "Econ" : recent.searchClass === "PREM" ? "Biz/First" : "All"
+            const rtLabel = recent.tripType === "round_trip" ? " RT" : ""
             return (
               <button
                 key={i}
@@ -154,7 +199,7 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
                 onClick={() => handleRecentClick(recent)}
                 className="text-[11px] px-2 py-0.5 rounded-full bg-card-border/50 text-foreground-muted hover:text-foreground hover:bg-card-border transition-colors"
               >
-                {recent.origin} → {recent.destination} · {new Date(recent.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {classLabel}
+                {recent.origin} → {recent.destination} · {new Date(recent.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {classLabel}{rtLabel}
               </button>
             )
           })}
@@ -170,11 +215,11 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
               className={cn(
                 "text-[11px] px-2 py-0.5 rounded-full font-medium",
                 p.status === "complete" ? "bg-emerald-500/10 text-emerald-400" :
-                p.status === "failed" ? "bg-red-500/10 text-red-400" :
+                p.status === "failed" ? "bg-foreground-muted/10 text-foreground-muted" :
                 "bg-primary/10 text-primary"
               )}
             >
-              {p.source}: {p.status === "complete" ? `${p.flights} flights` : p.status}
+              {p.source}: {p.status === "complete" ? `${p.flights} flights` : p.status === "failed" ? "unavailable" : p.status}
             </span>
           ))}
         </div>

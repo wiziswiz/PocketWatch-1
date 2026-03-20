@@ -37,17 +37,21 @@ export async function searchGoogleFlights(
   const allFlights: UnifiedFlightResult[] = []
 
   for (const travelClass of classesToSearch) {
+    const isRoundTrip = config.tripType === "round_trip" && config.returnDate
     const params = new URLSearchParams({
       engine: "google_flights",
       departure_id: config.origin,
       arrival_id: config.destination,
       outbound_date: config.departureDate,
-      type: "2", // one-way
+      type: isRoundTrip ? "1" : "2", // 1 = round-trip, 2 = one-way
       travel_class: String(travelClass),
       currency: "USD",
       hl: "en",
       api_key: apiKey,
     })
+    if (isRoundTrip) {
+      params.set("return_date", config.returnDate!)
+    }
 
     const resp = await fetch(`https://serpapi.com/search?${params}`)
     if (!resp.ok) continue

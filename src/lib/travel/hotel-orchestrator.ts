@@ -53,6 +53,8 @@ function roameLiveToUnified(hotel: RoameLiveHotel): UnifiedHotelResult {
     brand: d.brand,
     subBrand: null,
     hotelCode: d.id,
+    latitude: d.location?.coordinates?.[1] ?? null,
+    longitude: d.location?.coordinates?.[0] ?? null,
     sources: ["roame"],
     // Extra data from live search
     ...(summary.cpp > 0 ? {} : {}), // cpp available as summary.cpp if needed later
@@ -159,6 +161,8 @@ function mergeLiveWithSerpApi(
       if (serpMatch.images.length > result.images.length) result.images = serpMatch.images
       if (!result.cashPerNight && serpMatch.cashPerNight) result.cashPerNight = serpMatch.cashPerNight
       if (!result.cashTotal && serpMatch.cashTotal) result.cashTotal = serpMatch.cashTotal
+      if (result.latitude == null && serpMatch.latitude != null) result.latitude = serpMatch.latitude
+      if (result.longitude == null && serpMatch.longitude != null) result.longitude = serpMatch.longitude
       if (serpMatch.bookingLinks.length > 0) {
         result.bookingLinks = [...result.bookingLinks, ...serpMatch.bookingLinks]
       }
@@ -234,6 +238,8 @@ function addPointsOnlyHotels(
       brand: roame.brand,
       subBrand: roame.subBrand,
       hotelCode: roame.hotelId,
+      latitude: null,
+      longitude: null,
       sources: ["roame"],
     })
     normalizedExisting.add(normalized)

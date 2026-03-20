@@ -39,7 +39,8 @@ const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 const responseCache = new Map<string, { data: DashboardResults; expiry: number }>()
 
 function getFlightCacheKey(config: SearchConfig): string {
-  return `flight:${config.origin}:${config.destination}:${config.departureDate}:${config.searchClass}`
+  const rt = config.tripType === "round_trip" ? `:rt:${config.returnDate}` : ""
+  return `flight:${config.origin}:${config.destination}:${config.departureDate}:${config.searchClass}${rt}`
 }
 
 // ─── Recommendation Engine ──────────────────────────────────────
@@ -152,6 +153,101 @@ function generateWarnings(balances: PointsBalance[]): string[] {
   return warnings
 }
 
+// ─── Single-Leg Search ──────────────────────────────────────────
+
+interface LegSearchParams {
+  origin: string
+  destination: string
+  date: string
+  searchClass: SearchConfig["searchClass"]
+  leg?: "outbound" | "return"
+  /** For Google Flights round-trip, pass the full config */
+  googleConfig?: SearchConfig
+}
+
+async function searchOneLeg(
+  params: LegSearchParams,
+  credentials: SearchCredentials,
+  completionPct: Record<string, number>,
+  onProgress?: (progress: SearchProgress) => void,
+): Promise<UnifiedFlightResult[]> {
+  const { origin, destination, date, searchClass, leg, googleConfig } = params
+  const allFlights: UnifiedFlightResult[] = []
+  const promises: Promise<void>[] = []
+  const prefix = leg === "return" ? "return:" : ""
+
+  // Roame search
+  if (credentials.roameSession) {
+    const classes = searchClass === "both" ? ["ECON", "PREM"] : [searchClass]
+    for (const cls of classes) {
+      promises.push(
+        (async () => {
+          onProgress?.({ source: `${prefix}roame`, status: "searching" })
+          const { fares, percentCompleted } = await searchRoame(
+            credentials.roameSession!, origin, destination, date, cls,
+          )
+          const unified = roameFaresToUnified(fares, cls)
+          if (leg) unified.forEach(f => f.leg = leg)
+          allFlights.push(...unified)
+          completionPct[`${prefix}roame`] = percentCompleted
+          onProgress?.({ source: `${prefix}roame`, status: "complete", flights: unified.length })
+        })().catch(err => {
+          completionPct[`${prefix}roame`] = 0
+          onProgress?.({ source: `${prefix}roame`, status: "failed", error: (err as Error).message })
+        })
+      )
+    }
+  }
+
+  // Google Flights via SerpAPI (only for outbound — SerpAPI handles RT natively)
+  if (credentials.serpApiKey && leg !== "return") {
+    promises.push(
+      (async () => {
+        onProgress?.({ source: "google", status: "searching" })
+        const flights = await searchGoogleFlights(credentials.serpApiKey!, googleConfig || {
+          origin, destination, departureDate: date, searchClass,
+        })
+        if (leg) flights.forEach(f => f.leg = leg)
+        allFlights.push(...flights)
+        completionPct["google"] = flights.length > 0 ? 100 : 0
+        onProgress?.({ source: "google", status: "complete", flights: flights.length })
+      })().catch(err => {
+        completionPct["google"] = 0
+        onProgress?.({ source: "google", status: "failed", error: (err as Error).message })
+      })
+    )
+  }
+
+  // ATF (Award Travel Finder)
+  if (credentials.atfApiKey) {
+    promises.push(
+      (async () => {
+        onProgress?.({ source: `${prefix}atf`, status: "searching" })
+        const flights = await searchATF(credentials.atfApiKey!, origin, destination, date)
+        for (const f of flights) {
+          const roameMatch = allFlights.find(
+            r => r.source === "roame" &&
+              r.pointsProgram === f.pointsProgram &&
+              r.cabinClass === f.cabinClass &&
+              r.travelDate === f.travelDate
+          )
+          f.tags = roameMatch ? ["cross-verified"] : ["ATF-exclusive"]
+        }
+        if (leg) flights.forEach(f => f.leg = leg)
+        allFlights.push(...flights)
+        completionPct[`${prefix}atf`] = flights.length > 0 ? 100 : 0
+        onProgress?.({ source: `${prefix}atf`, status: "complete", flights: flights.length })
+      })().catch(err => {
+        completionPct[`${prefix}atf`] = 0
+        onProgress?.({ source: `${prefix}atf`, status: "failed", error: (err as Error).message })
+      })
+    )
+  }
+
+  await Promise.allSettled(promises)
+  return allFlights
+}
+
 // ─── Main Orchestrator ──────────────────────────────────────────
 
 export async function runSearch(
@@ -169,78 +265,41 @@ export async function runSearch(
   }
 
   const completionPct: Record<string, number> = {}
-  const allFlights: UnifiedFlightResult[] = []
+  const isRoundTrip = config.tripType === "round_trip" && config.returnDate
 
-  const promises: Promise<void>[] = []
+  // Outbound leg
+  const outboundFlights = await searchOneLeg(
+    {
+      origin: config.origin,
+      destination: config.destination,
+      date: config.departureDate,
+      searchClass: config.searchClass,
+      leg: isRoundTrip ? "outbound" : undefined,
+      googleConfig: config,
+    },
+    credentials,
+    completionPct,
+    onProgress,
+  )
 
-  // Roame search
-  if (credentials.roameSession) {
-    const classes = config.searchClass === "both" ? ["ECON", "PREM"] : [config.searchClass]
-    for (const cls of classes) {
-      promises.push(
-        (async () => {
-          onProgress?.({ source: "roame", status: "searching" })
-          const { fares, percentCompleted } = await searchRoame(
-            credentials.roameSession!, config.origin, config.destination,
-            config.departureDate, cls,
-          )
-          const unified = roameFaresToUnified(fares, cls)
-          allFlights.push(...unified)
-          completionPct["roame"] = percentCompleted
-          onProgress?.({ source: "roame", status: "complete", flights: unified.length })
-        })().catch(err => {
-          completionPct["roame"] = 0
-          onProgress?.({ source: "roame", status: "failed", error: (err as Error).message })
-        })
-      )
-    }
-  }
-
-  // Google Flights via SerpAPI
-  if (credentials.serpApiKey) {
-    promises.push(
-      (async () => {
-        onProgress?.({ source: "google", status: "searching" })
-        const flights = await searchGoogleFlights(credentials.serpApiKey!, config)
-        allFlights.push(...flights)
-        completionPct["google"] = flights.length > 0 ? 100 : 0
-        onProgress?.({ source: "google", status: "complete", flights: flights.length })
-      })().catch(err => {
-        completionPct["google"] = 0
-        onProgress?.({ source: "google", status: "failed", error: (err as Error).message })
-      })
+  // Return leg (round-trip only) — swapped origin/dest, uses returnDate
+  let returnFlights: UnifiedFlightResult[] = []
+  if (isRoundTrip) {
+    returnFlights = await searchOneLeg(
+      {
+        origin: config.destination,
+        destination: config.origin,
+        date: config.returnDate!,
+        searchClass: config.searchClass,
+        leg: "return",
+      },
+      credentials,
+      completionPct,
+      onProgress,
     )
   }
 
-  // ATF (Award Travel Finder)
-  if (credentials.atfApiKey) {
-    promises.push(
-      (async () => {
-        onProgress?.({ source: "atf", status: "searching" })
-        const flights = await searchATF(
-          credentials.atfApiKey!, config.origin, config.destination, config.departureDate,
-        )
-        // Cross-reference: tag ATF flights that match Roame results
-        for (const f of flights) {
-          const roameMatch = allFlights.find(
-            r => r.source === "roame" &&
-              r.pointsProgram === f.pointsProgram &&
-              r.cabinClass === f.cabinClass &&
-              r.travelDate === f.travelDate
-          )
-          f.tags = roameMatch ? ["cross-verified"] : ["ATF-exclusive"]
-        }
-        allFlights.push(...flights)
-        completionPct["atf"] = flights.length > 0 ? 100 : 0
-        onProgress?.({ source: "atf", status: "complete", flights: flights.length })
-      })().catch(err => {
-        completionPct["atf"] = 0
-        onProgress?.({ source: "atf", status: "failed", error: (err as Error).message })
-      })
-    )
-  }
-
-  await Promise.allSettled(promises)
+  const allFlights = [...outboundFlights, ...returnFlights]
 
   // Run value engine
   const { scored, insights } = scoreFlights(allFlights, balances, config.origin, config.destination)

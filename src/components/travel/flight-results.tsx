@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 
 interface FlightResultsProps {
   flights: ValueScoredFlight[]
+  onSearchCabin?: (cabin: string) => void
 }
 
 type CabinFilter = "all" | "economy" | "business" | "first"
@@ -14,7 +15,7 @@ type TypeFilter = "all" | "award" | "cash"
 type StopsFilter = "any" | "0" | "1" | "2"
 type SortBy = "valueScore" | "price" | "cpp" | "duration"
 
-export function FlightResults({ flights }: FlightResultsProps) {
+export function FlightResults({ flights, onSearchCabin }: FlightResultsProps) {
   const [cabinFilter, setCabinFilter] = useState<CabinFilter>("all")
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all")
   const [stopsFilter, setStopsFilter] = useState<StopsFilter>("any")
@@ -48,6 +49,10 @@ export function FlightResults({ flights }: FlightResultsProps) {
 
     return result
   }, [flights, cabinFilter, typeFilter, stopsFilter, sortBy])
+
+  const hasLegs = filtered.some(f => f.leg)
+  const outboundFiltered = hasLegs ? filtered.filter(f => f.leg === "outbound") : []
+  const returnFiltered = hasLegs ? filtered.filter(f => f.leg === "return") : []
 
   const cabins: { key: CabinFilter; label: string }[] = [
     { key: "all", label: "All" },
@@ -142,12 +147,39 @@ export function FlightResults({ flights }: FlightResultsProps) {
         {cabinFilter !== "all" || typeFilter !== "all" || stopsFilter !== "any" ? " (filtered)" : ""}
       </p>
 
-      {/* Result cards */}
-      <div className="space-y-2">
-        {filtered.map((flight) => (
-          <FlightResultCard key={flight.id} flight={flight} />
-        ))}
-      </div>
+      {/* Result cards — grouped by leg when round-trip */}
+      {filtered.length > 0 && hasLegs ? (
+        <>
+          {outboundFiltered.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-bold text-foreground-muted uppercase tracking-wide flex items-center gap-1.5">
+                <span className="material-symbols-rounded" style={{ fontSize: 14 }}>flight_takeoff</span>
+                Outbound ({outboundFiltered.length})
+              </h3>
+              {outboundFiltered.map((flight) => (
+                <FlightResultCard key={flight.id} flight={flight} />
+              ))}
+            </div>
+          )}
+          {returnFiltered.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-bold text-foreground-muted uppercase tracking-wide flex items-center gap-1.5">
+                <span className="material-symbols-rounded" style={{ fontSize: 14 }}>flight_land</span>
+                Return ({returnFiltered.length})
+              </h3>
+              {returnFiltered.map((flight) => (
+                <FlightResultCard key={flight.id} flight={flight} />
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((flight) => (
+            <FlightResultCard key={flight.id} flight={flight} />
+          ))}
+        </div>
+      )}
 
       {filtered.length === 0 && (
         <div className="card p-8 text-center">
@@ -155,6 +187,17 @@ export function FlightResults({ flights }: FlightResultsProps) {
             flight_land
           </span>
           <p className="text-sm text-foreground-muted">No flights match your filters.</p>
+          {cabinFilter !== "all" && onSearchCabin && (
+            <button
+              onClick={() => {
+                const classMap: Record<string, string> = { economy: "ECON", business: "PREM", first: "PREM" }
+                onSearchCabin(classMap[cabinFilter] || "PREM")
+              }}
+              className="mt-3 btn-primary text-xs px-4 py-2 rounded-lg"
+            >
+              Search {cabinFilter.charAt(0).toUpperCase() + cabinFilter.slice(1)} Class
+            </button>
+          )}
         </div>
       )}
     </div>

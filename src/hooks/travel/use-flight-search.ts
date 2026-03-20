@@ -16,6 +16,8 @@ export interface RecentSearch {
   destination: string
   date: string
   searchClass: SearchConfig["searchClass"]
+  tripType?: "one_way" | "round_trip"
+  returnDate?: string
   timestamp: number
 }
 
@@ -37,6 +39,8 @@ function saveRecentSearch(config: SearchConfig) {
       destination: config.destination,
       date: config.departureDate,
       searchClass: config.searchClass,
+      tripType: config.tripType,
+      returnDate: config.returnDate,
       timestamp: Date.now(),
     }
     // Remove duplicate if exists
@@ -106,6 +110,8 @@ export function useFlightSearch() {
       date: config.departureDate,
       class: config.searchClass,
     })
+    if (config.tripType) params.set("tripType", config.tripType)
+    if (config.returnDate) params.set("returnDate", config.returnDate)
 
     ;(async () => {
       try {

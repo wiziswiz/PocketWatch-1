@@ -36,6 +36,7 @@ export interface UnifiedFlightResult {
   bookingUrl: string
   fareClass: string
   travelDate?: string
+  leg?: "outbound" | "return"
 }
 
 export interface ValueScoredFlight extends UnifiedFlightResult {
@@ -112,6 +113,8 @@ export interface SearchConfig {
   destination: string
   departureDate: string
   searchClass: "ECON" | "PREM" | "both"
+  tripType?: "one_way" | "round_trip"
+  returnDate?: string
 }
 
 export interface PointsBalance {
@@ -221,6 +224,9 @@ export interface UnifiedHotelResult {
   brand: string | null
   subBrand: string | null
   hotelCode: string | null
+  // Geo coordinates (for map view)
+  latitude: number | null
+  longitude: number | null
   // Source tracking
   sources: ("serpapi" | "roame" | "atf")[]
 }

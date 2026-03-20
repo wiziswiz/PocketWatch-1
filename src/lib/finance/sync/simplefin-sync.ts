@@ -14,6 +14,7 @@ import {
 import { resolveInstitutionLogo } from "../institution-logos"
 import { categorizeTransaction, cleanMerchantName } from "../categorize"
 import { withRetry } from "../retry"
+import { detectTransfers } from "../transfer-detection"
 import type { SyncResult } from "./helpers"
 
 const CREDIT_CARD_PATTERNS = [
@@ -288,6 +289,10 @@ export async function syncSimpleFIN(
       })
     })
   }
+
+  // Detect internal transfers (e.g. checking→savings) and mark them excluded
+  // so they don't skew spending analysis. Runs after all transactions are upserted.
+  await detectTransfers(institution!.userId)
 
   // Auto-create CreditCardProfile for SimpleFIN credit accounts that don't have one yet.
   // SimpleFIN sometimes misclassifies credit cards as "checking", so we also detect
