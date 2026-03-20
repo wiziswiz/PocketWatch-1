@@ -28,6 +28,16 @@ export const ACCOUNT_SUB_TABS = [
 // FINANCE (FIAT) NAVIGATION
 // ============================================
 
+// ============================================
+// TRAVEL NAVIGATION
+// ============================================
+
+export const TRAVEL_NAV_TABS = [
+  { label: "Flight Search", href: "/travel", icon: "flight" },
+  { label: "Hotel Search", href: "/travel/hotels", icon: "hotel" },
+  { label: "Settings", href: "/travel/settings", icon: "settings" },
+]
+
 export const FINANCE_NAV_TABS = [
   { label: "Dashboard",     href: "/finance",               icon: "monitoring" },
   { label: "Accounts",      href: "/finance/accounts",      icon: "account_balance" },

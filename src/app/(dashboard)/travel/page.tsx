@@ -1,0 +1,111 @@
+"use client"
+
+import { useFlightSearch, useTravelBalances } from "@/hooks/travel"
+import { FlightSearchForm } from "@/components/travel/flight-search-form"
+import { FlightResults } from "@/components/travel/flight-results"
+import { RecommendationsPanel } from "@/components/travel/recommendations-panel"
+import { BalancesPanel } from "@/components/travel/balances-panel"
+
+export default function TravelPage() {
+  const { status, progress, results, error, search, isSearching, recentSearches } = useFlightSearch()
+  const { data: balancesData } = useTravelBalances()
+
+  return (
+    <div className="py-6 space-y-6">
+      <FlightSearchForm
+        onSearch={search}
+        isSearching={isSearching}
+        progress={progress}
+        recentSearches={recentSearches}
+      />
+
+      {error && (
+        <div className="card p-4 border-l-4" style={{ borderLeftColor: "var(--error)" }}>
+          <p className="text-sm text-red-400 font-medium">Search failed</p>
+          <p className="text-xs text-foreground-muted mt-1">{error}</p>
+        </div>
+      )}
+
+      {results && (
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+          {/* Main content */}
+          <div className="space-y-6 min-w-0">
+            {/* Insights */}
+            {results.insights.length > 0 && (
+              <div className="space-y-2">
+                {results.insights.map((insight, i) => (
+                  <div
+                    key={i}
+                    className="card p-3 flex items-start gap-2 border-l-3"
+                    style={{
+                      borderLeftColor: insight.priority === "high" ? "var(--error)" :
+                                      insight.priority === "medium" ? "var(--warning)" : "var(--primary)",
+                      borderLeftWidth: 3,
+                    }}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-foreground">{insight.title}</p>
+                      <p className="text-[11px] text-foreground-muted mt-0.5">{insight.detail}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Warnings */}
+            {results.warnings.length > 0 && (
+              <div className="space-y-1">
+                {results.warnings.map((w, i) => (
+                  <p key={i} className="text-[11px] text-amber-400/80">{w}</p>
+                ))}
+              </div>
+            )}
+
+            {/* Flight results */}
+            <FlightResults flights={results.flights} />
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-4">
+            <RecommendationsPanel recommendations={results.recommendations} />
+            <BalancesPanel balances={results.balances} />
+
+            {/* Route sweet spots */}
+            {results.routeSweetSpots.length > 0 && (
+              <div className="card p-4">
+                <h3 className="text-sm font-bold text-foreground mb-2">Route Sweet Spots</h3>
+                <div className="space-y-2">
+                  {results.routeSweetSpots.map((spot, i) => (
+                    <div key={i} className="text-xs">
+                      <p className="font-medium text-foreground">{spot.program} {spot.cabin}</p>
+                      <p className="text-foreground-muted text-[11px]">
+                        {spot.maxPoints.toLocaleString()} pts max — {spot.description.slice(0, 60)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {status === "idle" && !results && (
+        <div className="card p-12 text-center">
+          <span className="material-symbols-rounded text-foreground-muted/30 mb-3 block" style={{ fontSize: 48 }}>
+            flight_takeoff
+          </span>
+          <p className="text-sm text-foreground-muted">
+            Search for flights to see personalized award recommendations based on your points balances.
+          </p>
+          {balancesData?.balances && balancesData.balances.length > 0 && (
+            <p className="text-xs text-foreground-muted/70 mt-2">
+              {balancesData.balances.length} points programs loaded from your cards
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}

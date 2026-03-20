@@ -45,18 +45,26 @@ export const NET_WORTH_NAV_ITEMS: NavItem[] = [
   { id: "net-worth", label: "Net Worth", href: "/net-worth", icon: "equalizer" },
 ]
 
+export const TRAVEL_NAV_ITEMS: NavItem[] = [
+  { id: "travel-flights", label: "Flight Search", href: "/travel", icon: "flight" },
+  { id: "travel-hotels", label: "Hotel Search", href: "/travel/hotels", icon: "hotel" },
+  { id: "travel-settings", label: "Settings", href: "/travel/settings", icon: "settings" },
+]
+
 export const NAV_CATEGORIES: Record<string, { label: string; items: NavItem[] }> = {
   netWorth:  { label: "",              items: NET_WORTH_NAV_ITEMS },
   finance:   { label: "Finance",       items: FINANCE_NAV_ITEMS },
+  travel:    { label: "Travel",        items: TRAVEL_NAV_ITEMS },
   portfolio: { label: "Digital Assets", items: PORTFOLIO_NAV_ITEMS },
 }
 
 function buildDefaultPrefs(): SidebarPrefs {
   return {
-    categoryOrder: ["netWorth", "finance", "portfolio"],
+    categoryOrder: ["netWorth", "finance", "travel", "portfolio"],
     categories: {
       netWorth:  { order: NET_WORTH_NAV_ITEMS.map((i) => i.id), hidden: [] },
       finance:   { order: FINANCE_NAV_ITEMS.map((i) => i.id),   hidden: [] },
+      travel:    { order: TRAVEL_NAV_ITEMS.map((i) => i.id),    hidden: [] },
       portfolio: { order: PORTFOLIO_NAV_ITEMS.map((i) => i.id), hidden: [] },
     },
   }
@@ -69,6 +77,27 @@ function migratePrefs(prefs: SidebarPrefs): SidebarPrefs {
     prefs.categories.netWorth = {
       order: NET_WORTH_NAV_ITEMS.map((i) => i.id),
       hidden: [],
+    }
+    savePrefs(prefs)
+  }
+  // Inject travel category if missing
+  if (!prefs.categoryOrder.includes("travel")) {
+    const finIdx = prefs.categoryOrder.indexOf("finance")
+    prefs.categoryOrder.splice(finIdx + 1, 0, "travel")
+    prefs.categories.travel = {
+      order: TRAVEL_NAV_ITEMS.map((i) => i.id),
+      hidden: [],
+    }
+    savePrefs(prefs)
+  }
+  // Inject travel-hotels item if missing (added in Phase 2)
+  const travelCat = prefs.categories.travel
+  if (travelCat && !travelCat.order.includes("travel-hotels")) {
+    const settingsIdx = travelCat.order.indexOf("travel-settings")
+    if (settingsIdx >= 0) {
+      travelCat.order.splice(settingsIdx, 0, "travel-hotels")
+    } else {
+      travelCat.order.push("travel-hotels")
     }
     savePrefs(prefs)
   }
