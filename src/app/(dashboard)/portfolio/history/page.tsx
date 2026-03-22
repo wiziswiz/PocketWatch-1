@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useMemo } from "react"
 import {
   useProcessHistory,
   useAddAddressBookEntry,
@@ -27,6 +27,7 @@ import { HistoryEmptyState } from "@/components/portfolio/history/history-empty-
 import { HistoryPagination } from "@/components/portfolio/history/history-pagination"
 import { QuickLabelPopover } from "@/components/portfolio/history/history-quick-label-popover"
 import { QuickPricePopover } from "@/components/portfolio/history/history-quick-price-popover"
+import { TxDetailPanel } from "@/components/portfolio/history/tx-detail-panel"
 
 export default function HistoryEventsPage() {
   // ─── Filter state ───
@@ -81,6 +82,19 @@ export default function HistoryEventsPage() {
   // ─── Popover state ───
   const [labelTarget, setLabelTarget] = useState<{ address: string; chain?: string; rect: DOMRect } | null>(null)
   const [priceTarget, setPriceTarget] = useState<{ symbol: string; chain: string; asset: string; rect: DOMRect } | null>(null)
+
+  // ─── Transaction detail panel ───
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [selectedTx, setSelectedTx] = useState<Record<string, any> | null>(null)
+
+  // Build wallet label map for the detail panel
+  const walletLabels = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const [addr, name] of addressNames) {
+      map.set(addr, name)
+    }
+    return map
+  }, [addressNames])
 
   // ─── Expandable swap rows ───
   const [expandedSwapRows, setExpandedSwapRows] = useState<Set<string>>(new Set())
@@ -197,6 +211,7 @@ export default function HistoryEventsPage() {
             sortKey={sortKey} sortDir={sortDir} onSort={handleSort}
             getRowKey={getSwapRowKey} renderExpandedRow={renderSwapExpandedRow}
             expandedKeys={expandedSwapRows} onToggleExpand={handleToggleSwapExpand}
+            onRowClick={setSelectedTx}
           />
         )}
       </div>
@@ -237,6 +252,12 @@ export default function HistoryEventsPage() {
           }}
         />
       )}
+
+      <TxDetailPanel
+        transaction={selectedTx}
+        onClose={() => setSelectedTx(null)}
+        walletLabels={walletLabels}
+      />
     </div>
   )
 }

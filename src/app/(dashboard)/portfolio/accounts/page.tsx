@@ -12,6 +12,7 @@ import { SUPPORTED_EXCHANGES } from "@/lib/portfolio/exchanges"
 import { toExchangeServiceName } from "@/lib/portfolio/exchanges"
 import type { GroupedAccount } from "@/components/portfolio/accounts/types"
 import { AddWalletDialog } from "@/components/portfolio/accounts/add-wallet-dialog"
+import { ImportWalletsDialog } from "@/components/portfolio/accounts/import-wallets-dialog"
 import { RemoveWalletDialog } from "@/components/portfolio/accounts/remove-wallet-dialog"
 import { RemoveExchangeDialog } from "@/components/portfolio/accounts/remove-exchange-dialog"
 import { WalletCard } from "@/components/portfolio/accounts/wallet-card"
@@ -32,6 +33,7 @@ export default function AccountsPage() {
   const updateChains = useUpdateAccountChains()
 
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [showImportDialog, setShowImportDialog] = useState(false)
   const [newAddress, setNewAddress] = useState("")
   const [newLabel, setNewLabel] = useState("")
   const [selectedChains, setSelectedChains] = useState<Set<string>>(new Set(EVM_CHAIN_IDS))
@@ -254,6 +256,13 @@ export default function AccountsPage() {
             Add Exchange
           </Link>
           <button
+            onClick={() => setShowImportDialog(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-card-border text-foreground-muted hover:text-foreground hover:border-card-border-hover transition-colors text-sm font-medium rounded-lg"
+          >
+            <span className="material-symbols-rounded text-sm">upload</span>
+            Import
+          </button>
+          <button
             onClick={() => setShowAddDialog(true)}
             className="flex items-center gap-2 px-4 py-2 btn-primary transition-colors text-sm font-semibold"
           >
@@ -278,6 +287,9 @@ export default function AccountsPage() {
           onAdd={handleAdd}
           onClose={() => { setShowAddDialog(false); setAddError(""); setNewLabel("") }}
         />
+      )}
+      {showImportDialog && (
+        <ImportWalletsDialog onClose={() => setShowImportDialog(false)} />
       )}
       {confirmRemove && (
         <RemoveWalletDialog
