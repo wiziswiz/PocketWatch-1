@@ -12,8 +12,20 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
 }
 
-/** Map from Zerion/internal chain IDs to Alchemy network IDs. */
+/** Map from chain IDs (DB format + Zerion format) to Alchemy network IDs. */
 const ALCHEMY_NETWORKS: Record<string, string> = {
+  // DB format (uppercase short codes from TrackedWallet.chains)
+  ETH: "eth-mainnet",
+  ARBITRUM_ONE: "arb-mainnet",
+  BASE: "base-mainnet",
+  POLYGON_POS: "polygon-mainnet",
+  BSC: "bnb-mainnet",
+  OPTIMISM: "opt-mainnet",
+  LINEA: "linea-mainnet",
+  SCROLL: "scroll-mainnet",
+  ZKSYNC: "zksync-mainnet",
+  SOL: "solana-mainnet",
+  // Zerion format (lowercase)
   ethereum: "eth-mainnet",
   arbitrum: "arb-mainnet",
   base: "base-mainnet",

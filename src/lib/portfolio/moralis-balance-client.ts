@@ -9,8 +9,18 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
 }
 
-/** Map from internal chain IDs to Moralis chain parameter. */
+/** Map from chain IDs (DB format + Zerion format) to Moralis chain parameter. */
 const MORALIS_CHAINS: Record<string, string> = {
+  // DB format (uppercase short codes from TrackedWallet.chains)
+  ETH: "eth",
+  POLYGON_POS: "polygon",
+  BSC: "bsc",
+  ARBITRUM_ONE: "arbitrum",
+  BASE: "base",
+  OPTIMISM: "optimism",
+  LINEA: "linea",
+  SCROLL: "scroll",
+  // Zerion format (lowercase)
   ethereum: "eth",
   polygon: "polygon",
   "binance-smart-chain": "bsc",

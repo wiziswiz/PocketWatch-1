@@ -16,13 +16,20 @@ import { fetchMultiHeliusBalances } from "./helius-balance-client"
 import { fetchMultiAlchemyBalances } from "./alchemy-balance-client"
 import { fetchMultiMoralisBalances } from "./moralis-balance-client"
 
-// Chains treated as EVM — Zerion/Alchemy/Moralis can fetch these
+// Chains treated as EVM — Zerion/Alchemy/Moralis can fetch these.
+// Includes both DB format (uppercase short codes) and Zerion format (lowercase full names).
 const EVM_CHAINS = new Set([
+  // DB format (TrackedWallet.chains)
+  "ETH", "ARBITRUM_ONE", "BASE", "POLYGON_POS", "BSC", "OPTIMISM",
+  "LINEA", "SCROLL", "ZKSYNC", "AVAX", "GNOSIS", "BLAST", "MANTLE",
+  "MODE", "FANTOM", "ZORA", "BERACHAIN", "MONAD",
+  // Zerion format (lowercase)
   "ethereum", "arbitrum", "base", "polygon", "binance-smart-chain",
   "optimism", "linea", "scroll", "zksync-era",
 ])
 
-const SOLANA_CHAINS = new Set(["solana"])
+const SOLANA_CHAINS = new Set(["solana", "SOL"])
+const BTC_CHAINS = new Set(["btc", "BTC"])
 
 interface WalletInput {
   address: string
@@ -156,8 +163,8 @@ export async function fetchAllWalletBalances(
   const solanaWallets: WalletInput[] = []
 
   for (const w of wallets) {
-    const hasEvm = w.chains.some((c) => EVM_CHAINS.has(c.toLowerCase()))
-    const hasSolana = w.chains.some((c) => SOLANA_CHAINS.has(c.toLowerCase()))
+    const hasEvm = w.chains.some((c) => EVM_CHAINS.has(c))
+    const hasSolana = w.chains.some((c) => SOLANA_CHAINS.has(c))
 
     if (hasEvm) evmWallets.push(w)
     if (hasSolana) solanaWallets.push(w)
