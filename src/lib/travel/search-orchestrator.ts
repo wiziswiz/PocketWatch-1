@@ -17,6 +17,7 @@ import { searchGoogleFlights } from "./google-flights-client"
 import { searchATF } from "./atf-client"
 import { scoreFlights } from "./value-engine"
 import { getSweetSpotsForRoute } from "./sweet-spots"
+import { expandFlexDates, tagResults, generateWarnings } from "./search-helpers"
 
 // ─── Progress Callback ──────────────────────────────────────────
 
@@ -40,7 +41,10 @@ const responseCache = new Map<string, { data: DashboardResults; expiry: number }
 
 function getFlightCacheKey(config: SearchConfig): string {
   const rt = config.tripType === "round_trip" ? `:rt:${config.returnDate}` : ""
-  return `flight:${config.origin}:${config.destination}:${config.departureDate}:${config.searchClass}${rt}`
+  const origins = config.origins?.join(",") || config.origin
+  const dests = config.destinations?.join(",") || config.destination
+  const flex = config.flexDates ? ":flex" : ""
+  return `flight:${origins}:${dests}:${config.departureDate}:${config.searchClass}${rt}${flex}`
 }
 
 // ─── Recommendation Engine ──────────────────────────────────────
@@ -139,18 +143,6 @@ function generateRecommendations(
   }
 
   return recommendations
-}
-
-// ─── Warning Generation ─────────────────────────────────────────
-
-function generateWarnings(balances: PointsBalance[]): string[] {
-  const warnings: string[] = []
-
-  const alaska = balances.find(b => b.programKey === "ALASKA")
-  if (alaska && alaska.balance < 100000) {
-    warnings.push(`Alaska only has ${alaska.balance.toLocaleString()} — enough for ~1 business OW or 1 economy RT`)
-  }
-  return warnings
 }
 
 // ─── Single-Leg Search ──────────────────────────────────────────
@@ -267,39 +259,101 @@ export async function runSearch(
   const completionPct: Record<string, number> = {}
   const isRoundTrip = config.tripType === "round_trip" && config.returnDate
 
-  // Outbound leg
-  const outboundFlights = await searchOneLeg(
-    {
-      origin: config.origin,
-      destination: config.destination,
-      date: config.departureDate,
-      searchClass: config.searchClass,
-      leg: isRoundTrip ? "outbound" : undefined,
-      googleConfig: config,
-    },
-    credentials,
-    completionPct,
-    onProgress,
-  )
+  // Build origin/destination/date combos
+  const origins = config.origins?.length ? config.origins : [config.origin]
+  const dests = config.destinations?.length ? config.destinations : [config.destination]
+  const dates = config.flexDates ? expandFlexDates(config.departureDate) : [config.departureDate]
+  const isMulti = origins.length > 1 || dests.length > 1 || dates.length > 1
 
-  // Return leg (round-trip only) — swapped origin/dest, uses returnDate
-  let returnFlights: UnifiedFlightResult[] = []
-  if (isRoundTrip) {
-    returnFlights = await searchOneLeg(
-      {
-        origin: config.destination,
-        destination: config.origin,
-        date: config.returnDate!,
-        searchClass: config.searchClass,
-        leg: "return",
-      },
-      credentials,
-      completionPct,
-      onProgress,
-    )
+  const allFlights: UnifiedFlightResult[] = []
+
+  // Run all outbound combos in parallel
+  const outboundPromises: Promise<void>[] = []
+  let comboIndex = 0
+
+  for (const orig of origins) {
+    for (const dest of dests) {
+      for (const date of dates) {
+        const isPrimary = comboIndex === 0
+        comboIndex++
+        const label = isMulti ? `${orig}-${dest}:${date}` : undefined
+
+        outboundPromises.push(
+          (async () => {
+            // For non-primary combos, strip ATF to protect budget (21 calls/combo)
+            const comboCreds = isPrimary ? credentials : {
+              roameSession: credentials.roameSession,
+              serpApiKey: credentials.serpApiKey,
+              // ATF only on primary combo
+            }
+
+            const flights = await searchOneLeg(
+              {
+                origin: orig,
+                destination: dest,
+                date,
+                searchClass: config.searchClass,
+                leg: isRoundTrip ? "outbound" : undefined,
+                googleConfig: isPrimary ? config : { ...config, origin: orig, destination: dest, departureDate: date },
+              },
+              comboCreds,
+              completionPct,
+              label ? (p) => onProgress?.({ ...p, source: `${label}:${p.source}` }) : onProgress,
+            )
+
+            tagResults(flights, orig, dest, date, isRoundTrip ? "outbound" : undefined)
+            allFlights.push(...flights)
+          })()
+        )
+      }
+    }
   }
 
-  const allFlights = [...outboundFlights, ...returnFlights]
+  await Promise.allSettled(outboundPromises)
+
+  // Return leg (round-trip only) — swapped origin/dest, uses returnDate
+  if (isRoundTrip) {
+    const returnDates = config.flexDates ? expandFlexDates(config.returnDate!) : [config.returnDate!]
+    const returnPromises: Promise<void>[] = []
+    let retCombo = 0
+
+    for (const dest of dests) {
+      for (const orig of origins) {
+        for (const rDate of returnDates) {
+          const isPrimary = retCombo === 0
+          retCombo++
+          const label = isMulti ? `ret:${dest}-${orig}:${rDate}` : undefined
+
+          returnPromises.push(
+            (async () => {
+              const comboCreds = isPrimary ? credentials : {
+                roameSession: credentials.roameSession,
+                serpApiKey: credentials.serpApiKey,
+              }
+
+              const flights = await searchOneLeg(
+                {
+                  origin: dest,
+                  destination: orig,
+                  date: rDate,
+                  searchClass: config.searchClass,
+                  leg: "return",
+                },
+                comboCreds,
+                completionPct,
+                label ? (p) => onProgress?.({ ...p, source: `${label}:${p.source}` }) : onProgress,
+              )
+
+              tagResults(flights, dest, orig, rDate, "return")
+              allFlights.push(...flights)
+            })()
+          )
+        }
+      }
+    }
+
+    await Promise.allSettled(returnPromises)
+  }
 
   // Run value engine
   const { scored, insights } = scoreFlights(allFlights, balances, config.origin, config.destination)
@@ -323,6 +377,11 @@ export async function runSearch(
       searchedAt: new Date().toISOString(),
       sources: Object.keys(completionPct),
       completionPct,
+      ...(isMulti ? {
+        origins: origins.length > 1 ? origins : undefined,
+        destinations: dests.length > 1 ? dests : undefined,
+        flexDates: config.flexDates || undefined,
+      } : {}),
     },
     balances,
     flights: scored,

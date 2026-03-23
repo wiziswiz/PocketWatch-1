@@ -37,6 +37,10 @@ export interface UnifiedFlightResult {
   fareClass: string
   travelDate?: string
   leg?: "outbound" | "return"
+  // Multi-airport search tagging
+  searchOrigin?: string
+  searchDestination?: string
+  searchDate?: string
 }
 
 export interface ValueScoredFlight extends UnifiedFlightResult {
@@ -115,6 +119,9 @@ export interface SearchConfig {
   searchClass: "ECON" | "PREM" | "both"
   tripType?: "one_way" | "round_trip"
   returnDate?: string
+  flexDates?: boolean
+  origins?: string[]
+  destinations?: string[]
 }
 
 export interface PointsBalance {
@@ -152,6 +159,9 @@ export interface DashboardResults {
     searchedAt: string
     sources: string[]
     completionPct: Record<string, number>
+    origins?: string[]
+    destinations?: string[]
+    flexDates?: boolean
   }
   balances: PointsBalance[]
   flights: ValueScoredFlight[]

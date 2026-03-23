@@ -77,7 +77,11 @@ export default function TravelPage() {
             )}
 
             {/* Flight results */}
-            <FlightResults flights={results.flights} onSearchCabin={handleSearchCabin} />
+            <FlightResults
+              flights={results.flights}
+              onSearchCabin={handleSearchCabin}
+              isMultiSearch={!!(results.meta.origins || results.meta.destinations || results.meta.flexDates)}
+            />
           </div>
 
           {/* Sidebar */}

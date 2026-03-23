@@ -20,20 +20,28 @@ export async function GET(req: Request) {
   if (!user) return apiError("T1001", "Authentication required", 401)
 
   const url = new URL(req.url)
-  const origin = url.searchParams.get("origin")
-  const destination = url.searchParams.get("destination")
+  const originRaw = url.searchParams.get("origin")
+  const destRaw = url.searchParams.get("destination")
   const date = url.searchParams.get("date")
   const searchClass = (url.searchParams.get("class") || "PREM") as SearchConfig["searchClass"]
   const tripType = (url.searchParams.get("tripType") || "one_way") as SearchConfig["tripType"]
   const returnDate = url.searchParams.get("returnDate") || undefined
+  const flexDates = url.searchParams.get("flexDates") === "true"
 
-  if (!origin || !destination || !date) {
+  if (!originRaw || !destRaw || !date) {
     return apiError("T1002", "Missing required params: origin, destination, date", 400)
   }
 
-  if (!/^[A-Z]{3}$/.test(origin) || !/^[A-Z]{3}$/.test(destination)) {
-    return apiError("T1003", "Origin and destination must be 3-letter IATA codes", 400)
+  // Parse comma-separated airport codes (e.g. "MIA,FLL")
+  const originsList = originRaw.split(",").map(s => s.trim().toUpperCase()).filter(s => /^[A-Z]{3}$/.test(s))
+  const destsList = destRaw.split(",").map(s => s.trim().toUpperCase()).filter(s => /^[A-Z]{3}$/.test(s))
+
+  if (originsList.length === 0 || destsList.length === 0) {
+    return apiError("T1003", "Origin and destination must be valid 3-letter IATA codes", 400)
   }
+
+  const origin = originsList[0]!
+  const destination = destsList[0]!
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return apiError("T1004", "Date must be YYYY-MM-DD format", 400)
@@ -98,6 +106,8 @@ export async function GET(req: Request) {
     }
   }
 
+  console.log(`[travel] Credentials: roame=${!!roameSession} serpapi=${!!serpApiKey} atf=${!!atfApiKey} refreshToken=${!!refreshToken} (found ${creds.length} credential rows: ${creds.map(c => c.service).join(", ") || "none"})`)
+
   if (!roameSession && !serpApiKey && !atfApiKey) {
     return apiError("T1005", "No search credentials configured. Add Roame session, SerpAPI key, or ATF key in Travel Settings.", 400)
   }
@@ -116,7 +126,12 @@ export async function GET(req: Request) {
   })
   const balances = cardProfilesToBalances(cards)
 
-  const config: SearchConfig = { origin, destination, departureDate: date, searchClass, tripType, returnDate }
+  const config: SearchConfig = {
+    origin, destination, departureDate: date, searchClass, tripType, returnDate,
+    flexDates: flexDates || undefined,
+    origins: originsList.length > 1 ? originsList : undefined,
+    destinations: destsList.length > 1 ? destsList : undefined,
+  }
 
   // SSE stream
   const encoder = new TextEncoder()

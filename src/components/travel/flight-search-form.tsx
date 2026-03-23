@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import type { SearchConfig, SearchProgressEvent } from "@/types/travel"
 import type { RecentSearch } from "@/hooks/travel/use-flight-search"
 import { cn } from "@/lib/utils"
 import { DatePicker } from "@/components/ui/date-picker"
+import { NearbyAirportChips } from "./nearby-airport-chips"
 
 interface FlightSearchFormProps {
   onSearch: (config: SearchConfig) => void
@@ -20,28 +21,52 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
   const [returnDate, setReturnDate] = useState("")
   const [searchClass, setSearchClass] = useState<SearchConfig["searchClass"]>("PREM")
   const [tripType, setTripType] = useState<"one_way" | "round_trip">("one_way")
+  const [flexDates, setFlexDates] = useState(false)
+
+  // Parse codes from comma-separated input for nearby suggestions
+  const originCodes = useMemo(() => origin.split(",").map(s => s.trim().toUpperCase()).filter(s => /^[A-Z]{3}$/.test(s)), [origin])
+  const destCodes = useMemo(() => destination.split(",").map(s => s.trim().toUpperCase()).filter(s => /^[A-Z]{3}$/.test(s)), [destination])
+
+  const addNearbyAirport = (field: "origin" | "destination", code: string) => {
+    if (field === "origin") {
+      setOrigin(prev => prev ? `${prev},${code}` : code)
+    } else {
+      setDestination(prev => prev ? `${prev},${code}` : code)
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!origin || !destination || !date) return
     if (tripType === "round_trip" && !returnDate) return
+
+    const parsedOrigins = origin.split(",").map(s => s.trim().toUpperCase()).filter(s => /^[A-Z]{3}$/.test(s))
+    const parsedDests = destination.split(",").map(s => s.trim().toUpperCase()).filter(s => /^[A-Z]{3}$/.test(s))
+    if (parsedOrigins.length === 0 || parsedDests.length === 0) return
+
     onSearch({
-      origin: origin.toUpperCase(),
-      destination: destination.toUpperCase(),
+      origin: parsedOrigins[0]!,
+      destination: parsedDests[0]!,
       departureDate: date,
       searchClass,
       tripType,
       ...(tripType === "round_trip" ? { returnDate } : {}),
+      ...(flexDates ? { flexDates: true } : {}),
+      ...(parsedOrigins.length > 1 ? { origins: parsedOrigins } : {}),
+      ...(parsedDests.length > 1 ? { destinations: parsedDests } : {}),
     })
   }
 
   const handleRecentClick = (recent: RecentSearch) => {
-    setOrigin(recent.origin)
-    setDestination(recent.destination)
+    const originDisplay = recent.origins?.join(",") || recent.origin
+    const destDisplay = recent.destinations?.join(",") || recent.destination
+    setOrigin(originDisplay)
+    setDestination(destDisplay)
     setDate(recent.date)
     setSearchClass(recent.searchClass)
     setTripType(recent.tripType || "one_way")
     setReturnDate(recent.returnDate || "")
+    setFlexDates(recent.flexDates || false)
     onSearch({
       origin: recent.origin,
       destination: recent.destination,
@@ -49,6 +74,9 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
       searchClass: recent.searchClass,
       tripType: recent.tripType || "one_way",
       ...(recent.returnDate ? { returnDate: recent.returnDate } : {}),
+      ...(recent.flexDates ? { flexDates: true } : {}),
+      ...(recent.origins ? { origins: recent.origins } : {}),
+      ...(recent.destinations ? { destinations: recent.destinations } : {}),
     })
   }
 
@@ -93,12 +121,13 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
           <input
             type="text"
             value={origin}
-            onChange={(e) => setOrigin(e.target.value.toUpperCase().slice(0, 3))}
+            onChange={(e) => setOrigin(e.target.value.toUpperCase().replace(/[^A-Z,]/g, "").slice(0, 11))}
             placeholder="LAX"
-            maxLength={3}
+            maxLength={11}
             required
             className="w-full bg-background border border-card-border rounded-lg px-3 py-2 text-sm font-mono uppercase text-foreground placeholder:text-foreground-muted/50 focus:outline-none focus:border-primary transition-colors"
           />
+          <NearbyAirportChips codes={originCodes} field="origin" onAdd={addNearbyAirport} />
         </div>
 
         {/* Destination */}
@@ -109,12 +138,13 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
           <input
             type="text"
             value={destination}
-            onChange={(e) => setDestination(e.target.value.toUpperCase().slice(0, 3))}
+            onChange={(e) => setDestination(e.target.value.toUpperCase().replace(/[^A-Z,]/g, "").slice(0, 11))}
             placeholder="LHR"
-            maxLength={3}
+            maxLength={11}
             required
             className="w-full bg-background border border-card-border rounded-lg px-3 py-2 text-sm font-mono uppercase text-foreground placeholder:text-foreground-muted/50 focus:outline-none focus:border-primary transition-colors"
           />
+          <NearbyAirportChips codes={destCodes} field="destination" onAdd={addNearbyAirport} />
         </div>
 
         {/* Departure Date */}
@@ -162,6 +192,34 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
             ))}
           </select>
         </div>
+      </div>
+
+      {/* Flex dates toggle */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setFlexDates(!flexDates)}
+          className={cn(
+            "text-xs px-3 py-1.5 rounded-full font-medium transition-colors border",
+            flexDates
+              ? "bg-primary/10 text-primary border-primary/30"
+              : "bg-background text-foreground-muted border-card-border hover:text-foreground"
+          )}
+        >
+          <span className="material-symbols-rounded align-middle mr-1" style={{ fontSize: 14 }}>date_range</span>
+          Flexible +/- 1 day
+        </button>
+        {flexDates && date && (
+          <span className="text-[11px] text-foreground-muted">
+            {(() => {
+              const d = new Date(date + "T12:00:00")
+              const prev = new Date(d); prev.setDate(d.getDate() - 1)
+              const next = new Date(d); next.setDate(d.getDate() + 1)
+              const fmt = (dt: Date) => dt.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+              return `${fmt(prev)} – ${fmt(next)}`
+            })()}
+          </span>
+        )}
       </div>
 
       {/* Search button */}

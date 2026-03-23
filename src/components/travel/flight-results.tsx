@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 interface FlightResultsProps {
   flights: ValueScoredFlight[]
   onSearchCabin?: (cabin: string) => void
+  isMultiSearch?: boolean
 }
 
 type CabinFilter = "all" | "economy" | "business" | "first"
@@ -15,11 +16,34 @@ type TypeFilter = "all" | "award" | "cash"
 type StopsFilter = "any" | "0" | "1" | "2"
 type SortBy = "valueScore" | "price" | "cpp" | "duration"
 
-export function FlightResults({ flights, onSearchCabin }: FlightResultsProps) {
+export function FlightResults({ flights, onSearchCabin, isMultiSearch }: FlightResultsProps) {
   const [cabinFilter, setCabinFilter] = useState<CabinFilter>("all")
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all")
   const [stopsFilter, setStopsFilter] = useState<StopsFilter>("any")
   const [sortBy, setSortBy] = useState<SortBy>("valueScore")
+  const [airportFilter, setAirportFilter] = useState<string>("all")
+  const [dateFilter, setDateFilter] = useState<string>("all")
+
+  // Unique airport pairs and dates for filter pills
+  const airportPairs = useMemo(() => {
+    if (!isMultiSearch) return []
+    const pairs = new Set<string>()
+    for (const f of flights) {
+      if (f.searchOrigin && f.searchDestination) {
+        pairs.add(`${f.searchOrigin}-${f.searchDestination}`)
+      }
+    }
+    return Array.from(pairs).sort()
+  }, [flights, isMultiSearch])
+
+  const searchDates = useMemo(() => {
+    if (!isMultiSearch) return []
+    const dates = new Set<string>()
+    for (const f of flights) {
+      if (f.searchDate) dates.add(f.searchDate)
+    }
+    return Array.from(dates).sort()
+  }, [flights, isMultiSearch])
 
   const filtered = useMemo(() => {
     let result = [...flights]
@@ -33,6 +57,13 @@ export function FlightResults({ flights, onSearchCabin }: FlightResultsProps) {
     if (stopsFilter !== "any") {
       const maxStops = parseInt(stopsFilter)
       result = result.filter(f => f.stops <= maxStops)
+    }
+    if (airportFilter !== "all") {
+      const [orig, dest] = airportFilter.split("-")
+      result = result.filter(f => f.searchOrigin === orig && f.searchDestination === dest)
+    }
+    if (dateFilter !== "all") {
+      result = result.filter(f => f.searchDate === dateFilter)
     }
 
     result.sort((a, b) => {
@@ -48,7 +79,7 @@ export function FlightResults({ flights, onSearchCabin }: FlightResultsProps) {
     })
 
     return result
-  }, [flights, cabinFilter, typeFilter, stopsFilter, sortBy])
+  }, [flights, cabinFilter, typeFilter, stopsFilter, sortBy, airportFilter, dateFilter])
 
   const hasLegs = filtered.some(f => f.leg)
   const outboundFiltered = hasLegs ? filtered.filter(f => f.leg === "outbound") : []
@@ -140,6 +171,62 @@ export function FlightResults({ flights, onSearchCabin }: FlightResultsProps) {
           <option value="duration">Shortest Duration</option>
         </select>
       </div>
+
+      {/* Multi-search filter pills */}
+      {isMultiSearch && (airportPairs.length > 1 || searchDates.length > 1) && (
+        <div className="flex items-center gap-3 flex-wrap">
+          {airportPairs.length > 1 && (
+            <div className="flex items-center gap-1 bg-card rounded-lg p-1 border border-card-border">
+              <button
+                onClick={() => setAirportFilter("all")}
+                className={cn(
+                  "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+                  airportFilter === "all" ? "bg-primary/10 text-primary" : "text-foreground-muted hover:text-foreground"
+                )}
+              >
+                All Airports
+              </button>
+              {airportPairs.map(pair => (
+                <button
+                  key={pair}
+                  onClick={() => setAirportFilter(pair)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-colors",
+                    airportFilter === pair ? "bg-primary/10 text-primary" : "text-foreground-muted hover:text-foreground"
+                  )}
+                >
+                  {pair.replace("-", " → ")}
+                </button>
+              ))}
+            </div>
+          )}
+          {searchDates.length > 1 && (
+            <div className="flex items-center gap-1 bg-card rounded-lg p-1 border border-card-border">
+              <button
+                onClick={() => setDateFilter("all")}
+                className={cn(
+                  "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+                  dateFilter === "all" ? "bg-primary/10 text-primary" : "text-foreground-muted hover:text-foreground"
+                )}
+              >
+                All Dates
+              </button>
+              {searchDates.map(d => (
+                <button
+                  key={d}
+                  onClick={() => setDateFilter(d)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+                    dateFilter === d ? "bg-primary/10 text-primary" : "text-foreground-muted hover:text-foreground"
+                  )}
+                >
+                  {new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Results count */}
       <p className="text-xs text-foreground-muted">

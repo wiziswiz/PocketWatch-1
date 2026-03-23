@@ -57,7 +57,13 @@ export function TravelSettingsForm() {
         icon="key"
         title="Roame Session"
         credential={roameCred}
-        description="Paste your Roame session JWT from browser DevTools (starts with eyJ...). Searches 19+ award programs."
+        description={
+          <>
+            Searches 19+ award programs in one API call.{" "}
+            <a href="https://roame.travel" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Sign up free</a>
+            {" → "}login → open DevTools (F12) → Application → Cookies → find <code className="text-[10px] bg-card-border/50 px-1 rounded">session</code> cookie (starts with eyJ...).
+          </>
+        }
         inputType="textarea"
         rows={3}
         inputValue={roameSession}
@@ -97,10 +103,11 @@ export function TravelSettingsForm() {
         credential={atfCred}
         description={
           <>
-            Searches 19+ airlines for award availability. 150 calls/month.{" "}
-            <a href="https://awardtravelfinder.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-              Get a key
+            Searches 22 airlines for award availability (150 calls/month).{" "}
+            <a href="https://awardtravelfinder.com/api" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              Get API key
             </a>
+            {" "}— sign up, go to API settings, and copy your key.
           </>
         }
         inputValue={atfApiKey}
@@ -117,7 +124,13 @@ export function TravelSettingsForm() {
         title="Roame Auto-Refresh"
         badge="Auto-refresh enabled"
         credential={refreshCred}
-        description="Firebase refresh token for automatic session renewal. One-time setup from browser IndexedDB (Application > IndexedDB > firebaseLocalStorageDb > find refresh token value)."
+        description={
+          <>
+            One-time setup for automatic session renewal.{" "}
+            <a href="https://roame.travel" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Login to Roame</a>
+            {" → "}DevTools (F12) → Application → IndexedDB → <code className="text-[10px] bg-card-border/50 px-1 rounded">firebaseLocalStorageDb</code> → copy the <code className="text-[10px] bg-card-border/50 px-1 rounded">refreshToken</code> value.
+          </>
+        }
         inputType="textarea"
         rows={2}
         inputValue={refreshToken}

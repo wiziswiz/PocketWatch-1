@@ -18,6 +18,9 @@ export interface RecentSearch {
   searchClass: SearchConfig["searchClass"]
   tripType?: "one_way" | "round_trip"
   returnDate?: string
+  flexDates?: boolean
+  origins?: string[]
+  destinations?: string[]
   timestamp: number
 }
 
@@ -41,6 +44,9 @@ function saveRecentSearch(config: SearchConfig) {
       searchClass: config.searchClass,
       tripType: config.tripType,
       returnDate: config.returnDate,
+      flexDates: config.flexDates,
+      origins: config.origins,
+      destinations: config.destinations,
       timestamp: Date.now(),
     }
     // Remove duplicate if exists
@@ -104,14 +110,19 @@ export function useFlightSearch() {
 
     setState({ status: "searching", progress: [], results: null, error: null })
 
+    // Build origin/destination as comma-separated if multi-airport
+    const originParam = config.origins?.length ? config.origins.join(",") : config.origin
+    const destParam = config.destinations?.length ? config.destinations.join(",") : config.destination
+
     const params = new URLSearchParams({
-      origin: config.origin,
-      destination: config.destination,
+      origin: originParam,
+      destination: destParam,
       date: config.departureDate,
       class: config.searchClass,
     })
     if (config.tripType) params.set("tripType", config.tripType)
     if (config.returnDate) params.set("returnDate", config.returnDate)
+    if (config.flexDates) params.set("flexDates", "true")
 
     ;(async () => {
       try {

@@ -50,6 +50,16 @@ export function FlightResultCard({ flight }: FlightResultCardProps) {
               {flight.cabinClass}
             </span>
             {flight.sweetSpotMatch && <SweetSpotBadge match={flight.sweetSpotMatch} />}
+            {flight.searchOrigin && flight.searchDestination && (
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-card-border/50 text-foreground-muted">
+                {flight.searchOrigin}→{flight.searchDestination}
+              </span>
+            )}
+            {flight.searchDate && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-card-border/50 text-foreground-muted">
+                {new Date(flight.searchDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              </span>
+            )}
           </div>
           <p className="text-xs text-foreground-muted mt-0.5">
             {flight.airports.join(" → ")} • {formatDuration(flight.durationMinutes)} • {flight.stops === 0 ? "Nonstop" : `${flight.stops} stop${flight.stops > 1 ? "s" : ""}`}
