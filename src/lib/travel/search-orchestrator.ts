@@ -178,12 +178,14 @@ async function searchOneLeg(
           const { fares, percentCompleted } = await searchRoame(
             credentials.roameSession!, origin, destination, date, cls,
           )
+          console.log(`[travel] Roame ${origin}→${destination} ${date} (${cls}): ${fares.length} raw fares, ${percentCompleted}% complete`)
           const unified = roameFaresToUnified(fares, cls)
           if (leg) unified.forEach(f => f.leg = leg)
           allFlights.push(...unified)
           completionPct[`${prefix}roame`] = percentCompleted
           onProgress?.({ source: `${prefix}roame`, status: "complete", flights: unified.length })
         })().catch(err => {
+          console.error(`[travel] Roame search failed (${origin}→${destination} ${date}):`, (err as Error).message)
           completionPct[`${prefix}roame`] = 0
           onProgress?.({ source: `${prefix}roame`, status: "failed", error: (err as Error).message })
         })
@@ -204,6 +206,7 @@ async function searchOneLeg(
         completionPct["google"] = flights.length > 0 ? 100 : 0
         onProgress?.({ source: "google", status: "complete", flights: flights.length })
       })().catch(err => {
+        console.error(`[travel] Google Flights failed (${origin}→${destination} ${date}):`, (err as Error).message)
         completionPct["google"] = 0
         onProgress?.({ source: "google", status: "failed", error: (err as Error).message })
       })
@@ -230,6 +233,7 @@ async function searchOneLeg(
         completionPct[`${prefix}atf`] = flights.length > 0 ? 100 : 0
         onProgress?.({ source: `${prefix}atf`, status: "complete", flights: flights.length })
       })().catch(err => {
+        console.error(`[travel] ATF search failed (${origin}→${destination} ${date}):`, (err as Error).message)
         completionPct[`${prefix}atf`] = 0
         onProgress?.({ source: `${prefix}atf`, status: "failed", error: (err as Error).message })
       })
@@ -237,6 +241,7 @@ async function searchOneLeg(
   }
 
   await Promise.allSettled(promises)
+  console.log(`[travel] searchOneLeg ${origin}→${destination} ${date}: ${allFlights.length} total flights (roame=${allFlights.filter(f => f.source === "roame").length}, google=${allFlights.filter(f => f.source === "google").length}, atf=${allFlights.filter(f => f.source === "atf").length})`)
   return allFlights
 }
 

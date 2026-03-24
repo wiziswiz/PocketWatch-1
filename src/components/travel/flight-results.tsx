@@ -16,6 +16,67 @@ type TypeFilter = "all" | "award" | "cash"
 type StopsFilter = "any" | "0" | "1" | "2"
 type SortBy = "valueScore" | "price" | "cpp" | "duration"
 
+function FilterPills<T extends string>({
+  items, active, onChange,
+}: { items: [T, string][]; active: T; onChange: (v: T) => void }) {
+  return (
+    <div className="flex items-center gap-1 bg-card rounded-lg p-1 border border-card-border">
+      {items.map(([key, label]) => (
+        <button
+          key={key}
+          onClick={() => onChange(key)}
+          className={cn(
+            "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+            active === key ? "bg-primary/10 text-primary" : "text-foreground-muted hover:text-foreground"
+          )}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function FlightList({ flights }: { flights: ValueScoredFlight[] }) {
+  const hasLegs = flights.some(f => f.leg)
+
+  if (flights.length === 0) return null
+
+  if (!hasLegs) {
+    return (
+      <div className="space-y-2">
+        {flights.map(f => <FlightResultCard key={f.id} flight={f} />)}
+      </div>
+    )
+  }
+
+  const outbound = flights.filter(f => f.leg === "outbound")
+  const returnFlights = flights.filter(f => f.leg === "return")
+
+  return (
+    <>
+      {outbound.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-bold text-foreground-muted uppercase tracking-wide flex items-center gap-1.5">
+            <span className="material-symbols-rounded" style={{ fontSize: 14 }}>flight_takeoff</span>
+            Outbound ({outbound.length})
+          </h3>
+          {outbound.map(f => <FlightResultCard key={f.id} flight={f} />)}
+        </div>
+      )}
+      {returnFlights.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-bold text-foreground-muted uppercase tracking-wide flex items-center gap-1.5">
+            <span className="material-symbols-rounded" style={{ fontSize: 14 }}>flight_land</span>
+            Return ({returnFlights.length})
+          </h3>
+          {returnFlights.map(f => <FlightResultCard key={f.id} flight={f} />)}
+        </div>
+      )}
+    </>
+  )
+}
+
 export function FlightResults({ flights, onSearchCabin, isMultiSearch }: FlightResultsProps) {
   const [cabinFilter, setCabinFilter] = useState<CabinFilter>("all")
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all")
@@ -24,14 +85,12 @@ export function FlightResults({ flights, onSearchCabin, isMultiSearch }: FlightR
   const [airportFilter, setAirportFilter] = useState<string>("all")
   const [dateFilter, setDateFilter] = useState<string>("all")
 
-  // Unique airport pairs and dates for filter pills
+  // Unique airport pairs and dates for multi-search filter pills
   const airportPairs = useMemo(() => {
     if (!isMultiSearch) return []
     const pairs = new Set<string>()
     for (const f of flights) {
-      if (f.searchOrigin && f.searchDestination) {
-        pairs.add(`${f.searchOrigin}-${f.searchDestination}`)
-      }
+      if (f.searchOrigin && f.searchDestination) pairs.add(`${f.searchOrigin}-${f.searchDestination}`)
     }
     return Array.from(pairs).sort()
   }, [flights, isMultiSearch])
@@ -39,127 +98,46 @@ export function FlightResults({ flights, onSearchCabin, isMultiSearch }: FlightR
   const searchDates = useMemo(() => {
     if (!isMultiSearch) return []
     const dates = new Set<string>()
-    for (const f of flights) {
-      if (f.searchDate) dates.add(f.searchDate)
-    }
+    for (const f of flights) { if (f.searchDate) dates.add(f.searchDate) }
     return Array.from(dates).sort()
   }, [flights, isMultiSearch])
 
-  const filtered = useMemo(() => {
-    let result = [...flights]
+  // Compute filtered results — no useMemo, guaranteed fresh on every render
+  let filtered = [...flights]
+  if (cabinFilter !== "all") filtered = filtered.filter(f => f.cabinClass === cabinFilter)
+  if (typeFilter !== "all") filtered = filtered.filter(f => f.type === typeFilter)
+  if (stopsFilter !== "any") {
+    const max = parseInt(stopsFilter)
+    filtered = filtered.filter(f => f.stops <= max)
+  }
+  if (airportFilter !== "all") {
+    const [orig, dest] = airportFilter.split("-")
+    filtered = filtered.filter(f => f.searchOrigin === orig && f.searchDestination === dest)
+  }
+  if (dateFilter !== "all") filtered = filtered.filter(f => f.searchDate === dateFilter)
 
-    if (cabinFilter !== "all") {
-      result = result.filter(f => f.cabinClass === cabinFilter)
+  filtered.sort((a, b) => {
+    switch (sortBy) {
+      case "valueScore": return b.valueScore - a.valueScore
+      case "price":
+        if (a.type === "cash" && b.type === "cash") return (a.cashPrice || 0) - (b.cashPrice || 0)
+        return (a.points || 0) - (b.points || 0)
+      case "cpp": return (b.realCpp || 0) - (a.realCpp || 0)
+      case "duration": return a.durationMinutes - b.durationMinutes
+      default: return 0
     }
-    if (typeFilter !== "all") {
-      result = result.filter(f => f.type === typeFilter)
-    }
-    if (stopsFilter !== "any") {
-      const maxStops = parseInt(stopsFilter)
-      result = result.filter(f => f.stops <= maxStops)
-    }
-    if (airportFilter !== "all") {
-      const [orig, dest] = airportFilter.split("-")
-      result = result.filter(f => f.searchOrigin === orig && f.searchDestination === dest)
-    }
-    if (dateFilter !== "all") {
-      result = result.filter(f => f.searchDate === dateFilter)
-    }
+  })
 
-    result.sort((a, b) => {
-      switch (sortBy) {
-        case "valueScore": return b.valueScore - a.valueScore
-        case "price":
-          if (a.type === "cash" && b.type === "cash") return (a.cashPrice || 0) - (b.cashPrice || 0)
-          return (a.points || 0) - (b.points || 0)
-        case "cpp": return (b.realCpp || 0) - (a.realCpp || 0)
-        case "duration": return a.durationMinutes - b.durationMinutes
-        default: return 0
-      }
-    })
-
-    return result
-  }, [flights, cabinFilter, typeFilter, stopsFilter, sortBy, airportFilter, dateFilter])
-
-  const hasLegs = filtered.some(f => f.leg)
-  const outboundFiltered = hasLegs ? filtered.filter(f => f.leg === "outbound") : []
-  const returnFiltered = hasLegs ? filtered.filter(f => f.leg === "return") : []
-
-  const cabins: { key: CabinFilter; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "economy", label: "Economy" },
-    { key: "business", label: "Business" },
-    { key: "first", label: "First" },
-  ]
-
-  const types: { key: TypeFilter; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "award", label: "Award" },
-    { key: "cash", label: "Cash" },
-  ]
-
-  const stops: { key: StopsFilter; label: string }[] = [
-    { key: "any", label: "Any" },
-    { key: "0", label: "Nonstop" },
-    { key: "1", label: "1 Stop" },
-    { key: "2", label: "2 Stops" },
-  ]
+  const isFiltered = cabinFilter !== "all" || typeFilter !== "all" || stopsFilter !== "any"
+    || airportFilter !== "all" || dateFilter !== "all"
 
   return (
     <div className="space-y-3">
       {/* Filter bar */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-1 bg-card rounded-lg p-1 border border-card-border">
-          {cabins.map(c => (
-            <button
-              key={c.key}
-              onClick={() => setCabinFilter(c.key)}
-              className={cn(
-                "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
-                cabinFilter === c.key
-                  ? "bg-primary/10 text-primary"
-                  : "text-foreground-muted hover:text-foreground"
-              )}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-1 bg-card rounded-lg p-1 border border-card-border">
-          {types.map(t => (
-            <button
-              key={t.key}
-              onClick={() => setTypeFilter(t.key)}
-              className={cn(
-                "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
-                typeFilter === t.key
-                  ? "bg-primary/10 text-primary"
-                  : "text-foreground-muted hover:text-foreground"
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-1 bg-card rounded-lg p-1 border border-card-border">
-          {stops.map(s => (
-            <button
-              key={s.key}
-              onClick={() => setStopsFilter(s.key)}
-              className={cn(
-                "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
-                stopsFilter === s.key
-                  ? "bg-primary/10 text-primary"
-                  : "text-foreground-muted hover:text-foreground"
-              )}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
-
+        <FilterPills items={[["all","All"],["economy","Economy"],["business","Business"],["first","First"]]} active={cabinFilter} onChange={setCabinFilter} />
+        <FilterPills items={[["all","All"],["award","Award"],["cash","Cash"]]} active={typeFilter} onChange={setTypeFilter} />
+        <FilterPills items={[["any","Any"],["0","Nonstop"],["1","1 Stop"],["2","2 Stops"]]} active={stopsFilter} onChange={setStopsFilter} />
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortBy)}
@@ -176,98 +154,42 @@ export function FlightResults({ flights, onSearchCabin, isMultiSearch }: FlightR
       {isMultiSearch && (airportPairs.length > 1 || searchDates.length > 1) && (
         <div className="flex items-center gap-3 flex-wrap">
           {airportPairs.length > 1 && (
-            <div className="flex items-center gap-1 bg-card rounded-lg p-1 border border-card-border">
-              <button
-                onClick={() => setAirportFilter("all")}
-                className={cn(
-                  "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
-                  airportFilter === "all" ? "bg-primary/10 text-primary" : "text-foreground-muted hover:text-foreground"
-                )}
-              >
-                All Airports
-              </button>
-              {airportPairs.map(pair => (
-                <button
-                  key={pair}
-                  onClick={() => setAirportFilter(pair)}
-                  className={cn(
-                    "px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-colors",
-                    airportFilter === pair ? "bg-primary/10 text-primary" : "text-foreground-muted hover:text-foreground"
-                  )}
-                >
-                  {pair.replace("-", " → ")}
-                </button>
-              ))}
-            </div>
+            <FilterPills
+              items={[["all", "All Airports"] as [string, string], ...airportPairs.map(p => [p, p.replace("-", " → ")] as [string, string])]}
+              active={airportFilter}
+              onChange={setAirportFilter}
+            />
           )}
           {searchDates.length > 1 && (
-            <div className="flex items-center gap-1 bg-card rounded-lg p-1 border border-card-border">
-              <button
-                onClick={() => setDateFilter("all")}
-                className={cn(
-                  "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
-                  dateFilter === "all" ? "bg-primary/10 text-primary" : "text-foreground-muted hover:text-foreground"
-                )}
-              >
-                All Dates
-              </button>
-              {searchDates.map(d => (
-                <button
-                  key={d}
-                  onClick={() => setDateFilter(d)}
-                  className={cn(
-                    "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
-                    dateFilter === d ? "bg-primary/10 text-primary" : "text-foreground-muted hover:text-foreground"
-                  )}
-                >
-                  {new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                </button>
-              ))}
-            </div>
+            <FilterPills
+              items={[["all", "All Dates"] as [string, string], ...searchDates.map(d => [d, new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })] as [string, string])]}
+              active={dateFilter}
+              onChange={setDateFilter}
+            />
           )}
         </div>
       )}
 
-      {/* Results count */}
-      <p className="text-xs text-foreground-muted">
-        {filtered.length} flight{filtered.length !== 1 ? "s" : ""}
-        {cabinFilter !== "all" || typeFilter !== "all" || stopsFilter !== "any" ? " (filtered)" : ""}
-      </p>
+      {/* Results count + clear */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-foreground-muted">
+          {filtered.length} flight{filtered.length !== 1 ? "s" : ""}
+          {isFiltered ? ` of ${flights.length}` : ""}
+        </p>
+        {isFiltered && (
+          <button
+            onClick={() => { setCabinFilter("all"); setTypeFilter("all"); setStopsFilter("any"); setAirportFilter("all"); setDateFilter("all") }}
+            className="text-[11px] text-primary hover:text-primary/80 transition-colors"
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
 
-      {/* Result cards — grouped by leg when round-trip */}
-      {filtered.length > 0 && hasLegs ? (
-        <>
-          {outboundFiltered.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-xs font-bold text-foreground-muted uppercase tracking-wide flex items-center gap-1.5">
-                <span className="material-symbols-rounded" style={{ fontSize: 14 }}>flight_takeoff</span>
-                Outbound ({outboundFiltered.length})
-              </h3>
-              {outboundFiltered.map((flight) => (
-                <FlightResultCard key={flight.id} flight={flight} />
-              ))}
-            </div>
-          )}
-          {returnFiltered.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-xs font-bold text-foreground-muted uppercase tracking-wide flex items-center gap-1.5">
-                <span className="material-symbols-rounded" style={{ fontSize: 14 }}>flight_land</span>
-                Return ({returnFiltered.length})
-              </h3>
-              {returnFiltered.map((flight) => (
-                <FlightResultCard key={flight.id} flight={flight} />
-              ))}
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map((flight) => (
-            <FlightResultCard key={flight.id} flight={flight} />
-          ))}
-        </div>
-      )}
+      {/* Flight cards — only rendered when filtered has results */}
+      {filtered.length > 0 && <FlightList flights={filtered} />}
 
+      {/* Empty state */}
       {filtered.length === 0 && (
         <div className="card p-8 text-center">
           <span className="material-symbols-rounded text-foreground-muted mb-2 block" style={{ fontSize: 32 }}>

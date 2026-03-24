@@ -21,7 +21,9 @@ export function tagResults(
   date: string,
   leg?: "outbound" | "return",
 ) {
+  const prefix = `${origin}-${destination}-${date}`
   for (const f of flights) {
+    f.id = `${prefix}:${f.id}`
     f.searchOrigin = origin
     f.searchDestination = destination
     f.searchDate = date
