@@ -5,6 +5,7 @@ import type { SearchConfig, SearchProgressEvent } from "@/types/travel"
 import type { RecentSearch } from "@/hooks/travel/use-flight-search"
 import { cn } from "@/lib/utils"
 import { DatePicker } from "@/components/ui/date-picker"
+import { AirportInput } from "./airport-input"
 import { NearbyAirportChips } from "./nearby-airport-chips"
 
 interface FlightSearchFormProps {
@@ -118,15 +119,7 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
           <label className="text-[11px] text-foreground-muted font-medium uppercase tracking-wide mb-1 block">
             From
           </label>
-          <input
-            type="text"
-            value={origin}
-            onChange={(e) => setOrigin(e.target.value.toUpperCase().replace(/[^A-Z,]/g, "").slice(0, 11))}
-            placeholder="LAX"
-            maxLength={11}
-            required
-            className="w-full bg-background border border-card-border rounded-lg px-3 py-2 text-sm font-mono uppercase text-foreground placeholder:text-foreground-muted/50 focus:outline-none focus:border-primary transition-colors"
-          />
+          <AirportInput value={origin} onChange={setOrigin} placeholder="City or airport" required />
           <NearbyAirportChips codes={originCodes} field="origin" onAdd={addNearbyAirport} />
         </div>
 
@@ -135,15 +128,7 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
           <label className="text-[11px] text-foreground-muted font-medium uppercase tracking-wide mb-1 block">
             To
           </label>
-          <input
-            type="text"
-            value={destination}
-            onChange={(e) => setDestination(e.target.value.toUpperCase().replace(/[^A-Z,]/g, "").slice(0, 11))}
-            placeholder="LHR"
-            maxLength={11}
-            required
-            className="w-full bg-background border border-card-border rounded-lg px-3 py-2 text-sm font-mono uppercase text-foreground placeholder:text-foreground-muted/50 focus:outline-none focus:border-primary transition-colors"
-          />
+          <AirportInput value={destination} onChange={setDestination} placeholder="City or airport" required />
           <NearbyAirportChips codes={destCodes} field="destination" onAdd={addNearbyAirport} />
         </div>
 
