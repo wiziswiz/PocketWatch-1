@@ -71,6 +71,17 @@ export const PROGRAM_DISPLAY_NAMES: Record<string, string> = {
   EL_AL: "Matmid Club",
   CONDOR: "Miles & More",
   CAPE_AIR: "Cape Air",
+  GOL: "Smiles",
+  LIFEMILES: "LifeMiles",
+  SMILES: "Smiles",
+  KOREAN_AIR: "SKYPASS",
+  ASIANA: "Asiana Club",
+  CITI_THANKYOU: "Citi ThankYou",
+  AMEX_MR: "Amex Membership Rewards",
+  CHASE_UR: "Chase Ultimate Rewards",
+  CAPITAL_ONE: "Capital One Miles",
+  BILT: "Bilt Rewards",
+  ATMOS: "Atmos",
 }
 
 /**
