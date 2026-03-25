@@ -6,12 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation"
 export function LandingPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [mode, setMode] = useState<"loading" | "setup" | "unlock">("loading")
+  const [mode, setMode] = useState<"loading" | "setup" | "unlock" | "restore">("loading")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [showReset, setShowReset] = useState(false)
+  const [restoreFile, setRestoreFile] = useState<File | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -82,6 +83,27 @@ export function LandingPage() {
       setPassword("")
       setConfirmPassword("")
       setShowReset(false)
+    } catch {
+      setError("Network error. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleRestore(e: React.FormEvent) {
+    e.preventDefault()
+    if (!restoreFile || !password) return
+    setError(null)
+    setLoading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", restoreFile)
+      formData.append("password", password)
+      const res = await fetch("/api/backup/import", { method: "POST", body: formData })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || "Restore failed"); return }
+      if (typeof window !== "undefined") sessionStorage.removeItem("__pw_auth_redirect")
+      router.push("/net-worth")
     } catch {
       setError("Network error. Please try again.")
     } finally {
@@ -210,9 +232,61 @@ export function LandingPage() {
         )}
 
         {mode === "setup" && (
-          <p className="text-xs text-foreground-muted/60 text-center">
-            Your password derives the encryption key for all data. There is no recovery — if you forget it, reset wipes everything.
-          </p>
+          <>
+            <p className="text-xs text-foreground-muted/60 text-center">
+              Your password derives the encryption key for all data. There is no recovery — if you forget it, reset wipes everything.
+            </p>
+            <button
+              type="button"
+              onClick={() => { setMode("restore"); setError(null); setPassword("") }}
+              className="text-xs text-primary hover:text-primary-hover transition-colors"
+            >
+              Restore from backup instead
+            </button>
+          </>
+        )}
+
+        {mode === "restore" && (
+          <form onSubmit={handleRestore} className="w-full space-y-4">
+            <p className="text-sm text-foreground-muted text-center">
+              Upload a .pwbackup file and enter the vault password used when it was created.
+            </p>
+            <div>
+              <input
+                type="file"
+                accept=".pwbackup"
+                onChange={(e) => setRestoreFile(e.target.files?.[0] ?? null)}
+                className="w-full text-sm text-foreground-muted file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border file:border-card-border file:bg-card file:text-sm file:text-foreground file:font-medium hover:file:bg-card-hover file:cursor-pointer file:transition-colors"
+              />
+            </div>
+            <div>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Vault password"
+                required
+                className="w-full px-4 py-3 text-sm bg-card border border-card-border rounded-lg outline-none focus:border-primary transition-colors placeholder:text-foreground-muted"
+              />
+            </div>
+            {error && (
+              <div className="text-sm text-error bg-error-muted px-4 py-2 rounded-lg">{error}</div>
+            )}
+            <button
+              type="submit"
+              disabled={loading || !restoreFile || !password}
+              className="w-full px-6 py-3 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50"
+            >
+              {loading ? "Restoring..." : "Restore Backup"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode("setup"); setError(null); setPassword(""); setRestoreFile(null) }}
+              className="w-full text-xs text-foreground-muted hover:text-foreground transition-colors text-center"
+            >
+              Back to setup
+            </button>
+          </form>
         )}
       </div>
     </div>

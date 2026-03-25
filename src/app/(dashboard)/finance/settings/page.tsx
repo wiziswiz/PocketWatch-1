@@ -31,6 +31,7 @@ import { StatementCoverageContent } from "@/components/finance/settings/statemen
 import { AutoLockSetting } from "@/components/finance/settings/auto-lock-setting"
 import { StatementUploadInline } from "@/components/finance/settings/statement-upload-inline"
 import { NotificationSettings } from "@/components/finance/settings/notification-settings"
+import { BackupSection } from "@/components/finance/settings/backup-section"
 
 function deriveVerificationState(payload?: Partial<FinanceCredentialVerificationResponse> | null): {
   verificationState: FinanceVerificationState
@@ -385,6 +386,14 @@ export default function FinanceSettingsPage() {
         className="rounded-xl"
       >
         <AutoLockSetting />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Backup & Restore"
+        icon="cloud_download"
+        className="rounded-xl"
+      >
+        <BackupSection />
       </CollapsibleSection>
 
       <CollapsibleSection
