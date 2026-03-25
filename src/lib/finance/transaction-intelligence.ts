@@ -73,6 +73,20 @@ async function detectRefundsAndDeposits(userId: string): Promise<NewAlert[]> {
   const refundLookbackDate = new Date()
   refundLookbackDate.setDate(refundLookbackDate.getDate() - REFUND_MATCH_DAYS)
 
+  // Fetch refund match candidates once (not per-credit)
+  const candidates = await db.financeTransaction.findMany({
+    where: {
+      userId,
+      isExcluded: false,
+      isDuplicate: false,
+      amount: { gt: 0 },
+      date: { gte: refundLookbackDate },
+    },
+    select: { id: true, name: true, merchantName: true, amount: true, date: true },
+    orderBy: { date: "desc" },
+    take: 200,
+  })
+
   for (const credit of credits) {
     if (alertedIds.has(credit.id)) continue
 
@@ -81,7 +95,6 @@ async function detectRefundsAndDeposits(userId: string): Promise<NewAlert[]> {
 
     // Skip non-spending categories for refund matching
     if (credit.category && NON_SPENDING_CATEGORIES.has(credit.category)) {
-      // This is a deposit/income, not a refund
       alerts.push({
         alertType: "deposit",
         title: "Money Received",
@@ -93,20 +106,6 @@ async function detectRefundsAndDeposits(userId: string): Promise<NewAlert[]> {
       })
       continue
     }
-
-    // Try to match with a prior charge from same merchant
-    const candidates = await db.financeTransaction.findMany({
-      where: {
-        userId,
-        isExcluded: false,
-        isDuplicate: false,
-        amount: { gt: 0 },
-        date: { gte: refundLookbackDate },
-      },
-      select: { id: true, name: true, merchantName: true, amount: true, date: true },
-      orderBy: { date: "desc" },
-      take: 200,
-    })
 
     let isRefund = false
     const matchedCharge = creditMerchant
@@ -239,18 +238,26 @@ async function detectBudgetWarnings(userId: string): Promise<NewAlert[]> {
     existingAlerts.map((a) => (a.metadata as Record<string, string> | null)?.dedupKey).filter(Boolean),
   )
 
+  // Fetch all category spending in one query instead of per-budget
+  const budgetCategories = budgets.map((b) => b.category)
+  const spendByCategory = new Map<string, number>()
+  const grouped = await db.financeTransaction.groupBy({
+    by: ["category"],
+    where: { userId, category: { in: budgetCategories }, isExcluded: false, isDuplicate: false, date: { gte: monthStart }, amount: { gt: 0 } },
+    _sum: { amount: true },
+  })
+  for (const row of grouped) {
+    if (row.category) spendByCategory.set(row.category, row._sum.amount ?? 0)
+  }
+
   const alerts: NewAlert[] = []
 
   for (const budget of budgets) {
+    if (budget.monthlyLimit <= 0) continue
     const dedupKey = budget.category
     if (alertedCategories.has(dedupKey)) continue
 
-    const agg = await db.financeTransaction.aggregate({
-      where: { userId, category: budget.category, isExcluded: false, isDuplicate: false, date: { gte: monthStart }, amount: { gt: 0 } },
-      _sum: { amount: true },
-    })
-
-    const spent = agg._sum.amount ?? 0
+    const spent = spendByCategory.get(budget.category) ?? 0
     const ratio = spent / budget.monthlyLimit
 
     if (ratio >= 1) {

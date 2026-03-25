@@ -185,15 +185,22 @@ export async function PATCH(req: NextRequest) {
       await updateYieldRate(parsed.accountId, parsed.apy, parsed.apyNote)
     }
 
-    // Handle balance correction (recalculates yieldEarned from principal)
+    // Handle balance correction (recalculates yieldEarned from principal) — yield accounts only
     if (parsed.value !== undefined && parsed.correctBalance) {
+      if (account.subtype !== "yield") {
+        return apiError("F9016", "Balance correction only applies to yield accounts", 400)
+      }
       await correctYieldBalance(parsed.accountId, parsed.value)
     }
 
-    // Handle additional principal deposit
+    // Handle additional principal deposit — re-fetch fresh state after any prior mutations
     if (parsed.addPrincipal && parsed.addPrincipal > 0) {
-      const currentPrincipal = account.principalDeposited ?? account.currentBalance ?? 0
-      const currentBalance = account.currentBalance ?? 0
+      const fresh = await db.financeAccount.findUnique({
+        where: { id: parsed.accountId },
+        select: { principalDeposited: true, currentBalance: true },
+      })
+      const currentPrincipal = fresh?.principalDeposited ?? fresh?.currentBalance ?? 0
+      const currentBalance = fresh?.currentBalance ?? 0
       await db.financeAccount.update({
         where: { id: parsed.accountId },
         data: {

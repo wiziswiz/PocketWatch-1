@@ -109,7 +109,9 @@ export async function POST(request: NextRequest) {
       }
       const alertResult = await detectAndNotify(userId)
       alertResults.push({ userId, alertsSent: alertResult.alertsSent })
-      await accrueYield(userId).catch(() => {})
+      await accrueYield(userId).catch((err) => {
+        console.error(`[finance-sync-worker] accrueYield failed userId=${userId}:`, err instanceof Error ? err.message : err)
+      })
     } catch (err) {
       console.error("[finance-sync-worker] Alert check failed:", err instanceof Error ? err.message : err)
     }

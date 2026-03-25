@@ -64,9 +64,9 @@ export async function notifyPriceChanges(
   userId: string,
   priceChanges: Array<{ merchantName: string; oldAmount: number; newAmount: number }>,
 ): Promise<void> {
-  // Dedup: check if we already alerted on this price change today
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  // Dedup: check if we already alerted on this price change today (UTC)
+  const now = new Date()
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
   const existingAlerts = await db.financeAlert.findMany({
     where: { userId, alertType: "price_change", sentAt: { gte: today } },
     select: { merchantName: true },

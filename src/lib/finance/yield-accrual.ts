@@ -25,7 +25,7 @@ export async function accrueYield(userId: string): Promise<{ updated: number }> 
       currentBalance: { not: null },
       institution: { provider: "manual" },
     },
-    select: { id: true, currentBalance: true, apy: true, yieldEarned: true, updatedAt: true },
+    select: { id: true, currentBalance: true, apy: true, yieldEarned: true, lastYieldAccruedAt: true },
   })
 
   let updated = 0
@@ -34,12 +34,14 @@ export async function accrueYield(userId: string): Promise<{ updated: number }> 
     if (!acct.apy || !acct.currentBalance || acct.currentBalance <= 0) continue
 
     // Skip if already accrued today
-    const lastUpdate = new Date(Date.UTC(
-      acct.updatedAt.getUTCFullYear(),
-      acct.updatedAt.getUTCMonth(),
-      acct.updatedAt.getUTCDate(),
-    ))
-    if (lastUpdate.getTime() >= today.getTime()) continue
+    if (acct.lastYieldAccruedAt) {
+      const lastAccrual = new Date(Date.UTC(
+        acct.lastYieldAccruedAt.getUTCFullYear(),
+        acct.lastYieldAccruedAt.getUTCMonth(),
+        acct.lastYieldAccruedAt.getUTCDate(),
+      ))
+      if (lastAccrual.getTime() >= today.getTime()) continue
+    }
 
     const dailyRate = acct.apy / 365
     const dailyYield = Math.round(acct.currentBalance * dailyRate * 100) / 100
@@ -48,7 +50,7 @@ export async function accrueYield(userId: string): Promise<{ updated: number }> 
 
     await db.financeAccount.update({
       where: { id: acct.id },
-      data: { currentBalance: newBalance, yieldEarned: newYieldEarned },
+      data: { currentBalance: newBalance, yieldEarned: newYieldEarned, lastYieldAccruedAt: today },
     })
 
     updated++
@@ -77,8 +79,9 @@ export async function updateYieldRate(
 
   const history = (account.apyHistory as Array<{ apy: number; date: string; note?: string }>) ?? []
   const entry = {
-    apy: account.apy ?? 0,
+    apy: newApy,
     date: new Date().toISOString().split("T")[0],
+    previousApy: account.apy ?? 0,
     ...(note ? { note } : {}),
   }
 
