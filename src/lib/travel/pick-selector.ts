@@ -10,7 +10,8 @@ import type { ValueScoredFlight, PickCandidate, PickCategory } from "@/types/tra
 interface PickMeta {
   label: string
   icon: string
-  accent: string
+  accentLight: string
+  accentDark: string
   metric: (f: ValueScoredFlight) => string
 }
 
@@ -18,31 +19,36 @@ export const PICK_CATEGORY_META: Record<PickCategory, PickMeta> = {
   "pocketwatch-pick": {
     label: "Top Pick",
     icon: "star",
-    accent: "#818cf8",
+    accentLight: "#6366f1",
+    accentDark: "#818cf8",
     metric: (f) => `${f.valueScore}/100`,
   },
   "best-value": {
     label: "Best Value",
     icon: "trending_up",
-    accent: "#6ee7b7",
+    accentLight: "#059669",
+    accentDark: "#6ee7b7",
     metric: (f) => f.realCpp ? `${f.realCpp}c/pt` : "",
   },
   quickest: {
     label: "Quickest",
     icon: "bolt",
-    accent: "#fcd34d",
+    accentLight: "#d97706",
+    accentDark: "#fcd34d",
     metric: (f) => formatDuration(f.durationMinutes),
   },
   nonstop: {
     label: "Nonstop",
     icon: "flight_takeoff",
-    accent: "#93c5fd",
+    accentLight: "#2563eb",
+    accentDark: "#93c5fd",
     metric: () => "Direct",
   },
   "sweet-spot": {
     label: "Sweet Spot",
     icon: "target",
-    accent: "#c4b5fd",
+    accentLight: "#7c3aed",
+    accentDark: "#c4b5fd",
     metric: (f) => f.sweetSpotMatch?.label ?? "Matched",
   },
 }

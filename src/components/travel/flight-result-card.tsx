@@ -11,11 +11,11 @@ interface FlightResultCardProps {
 }
 
 const SOURCE_COLORS: Record<string, string> = {
-  roame: "bg-purple-500/10 text-purple-400",
-  pointme: "bg-indigo-500/10 text-indigo-400",
-  google: "bg-emerald-500/10 text-emerald-400",
-  atf: "bg-orange-500/10 text-orange-400",
-  "hidden-city": "bg-pink-500/10 text-pink-400",
+  roame: "bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400",
+  pointme: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400",
+  google: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400",
+  atf: "bg-orange-100 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400",
+  "hidden-city": "bg-pink-100 text-pink-700 dark:bg-pink-500/10 dark:text-pink-400",
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -27,10 +27,10 @@ const SOURCE_LABELS: Record<string, string> = {
 }
 
 const cppRatingColors: Record<string, string> = {
-  exceptional: "text-emerald-400",
-  great: "text-blue-400",
+  exceptional: "text-emerald-600 dark:text-emerald-400",
+  great: "text-blue-600 dark:text-blue-400",
   good: "text-foreground",
-  fair: "text-amber-400",
+  fair: "text-amber-600 dark:text-amber-400",
   poor: "text-foreground-muted",
 }
 
@@ -91,8 +91,8 @@ export function FlightResultCard({ flight }: FlightResultCardProps) {
             <span className="text-sm font-bold text-foreground truncate">{flight.airline}</span>
             <span className={cn(
               "text-[10px] font-medium uppercase px-1.5 py-0.5 rounded",
-              flight.cabinClass === "first" ? "bg-amber-500/10 text-amber-400" :
-              flight.cabinClass === "business" ? "bg-blue-500/10 text-blue-400" :
+              flight.cabinClass === "first" ? "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400" :
+              flight.cabinClass === "business" ? "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400" :
               "bg-card-border/50 text-foreground-muted"
             )}>
               {flight.cabinClass}
@@ -163,7 +163,7 @@ export function FlightResultCard({ flight }: FlightResultCardProps) {
             <span className="text-foreground-muted/40">•</span>
             <span className={cn(
               "text-[11px]",
-              flight.availableSeats <= 3 ? "text-amber-400" : "text-foreground-muted"
+              flight.availableSeats <= 3 ? "text-amber-600 dark:text-amber-400" : "text-foreground-muted"
             )}>
               {flight.availableSeats <= 9 ? `${flight.availableSeats} seats` : "9+ seats"}
             </span>
@@ -202,7 +202,7 @@ export function FlightResultCard({ flight }: FlightResultCardProps) {
         <div className="mt-1.5">
           <p className={cn(
             "text-[11px]",
-            flight.canAfford ? "text-emerald-400" : "text-amber-400"
+            flight.canAfford ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
           )}>
             {flight.affordDetails}
           </p>

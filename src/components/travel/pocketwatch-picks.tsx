@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useEffect, useState } from "react"
 import type { ValueScoredFlight, PickCandidate } from "@/types/travel"
 import { selectPicks, PICK_CATEGORY_META, formatDuration } from "@/lib/travel/pick-selector"
 import { PROGRAM_DISPLAY_NAMES } from "@/lib/travel/constants"
@@ -53,10 +53,23 @@ interface PickCardProps {
   onPickClick?: (flightId: string) => void
 }
 
+function useIsDark() {
+  const [dark, setDark] = useState(false)
+  useEffect(() => {
+    const check = () => setDark(document.documentElement.getAttribute("data-theme") === "dark")
+    check()
+    const obs = new MutationObserver(check)
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] })
+    return () => obs.disconnect()
+  }, [])
+  return dark
+}
+
 function PickCard({ pick, isMultiSearch, onPickClick }: PickCardProps) {
   const { flight } = pick
   const meta = PICK_CATEGORY_META[pick.category]
-  const accent = meta.accent
+  const isDark = useIsDark()
+  const accent = isDark ? meta.accentDark : meta.accentLight
   const programName = flight.pointsProgram
     ? PROGRAM_DISPLAY_NAMES[flight.pointsProgram] || flight.pointsProgram
     : null
@@ -101,8 +114,8 @@ function PickCard({ pick, isMultiSearch, onPickClick }: PickCardProps) {
         {flight.airline}
         <span className={cn(
           "font-normal ml-1.5 uppercase text-[10px]",
-          flight.cabinClass === "first" ? "text-amber-400/70" :
-          flight.cabinClass === "business" ? "text-blue-400/70" :
+          flight.cabinClass === "first" ? "text-amber-700 dark:text-amber-400/70" :
+          flight.cabinClass === "business" ? "text-blue-700 dark:text-blue-400/70" :
           "text-foreground-muted",
         )}>
           {flight.cabinClass}

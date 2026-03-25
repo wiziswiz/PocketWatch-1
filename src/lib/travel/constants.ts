@@ -15,11 +15,16 @@ export const PROGRAM_BOOKING_URLS: Record<string, string> = {
   QATAR: "https://www.qatarairways.com/en-us/homepage.html",
   SINGAPORE: "https://www.singaporeair.com/en_UK/ppsclub-krisflyer/",
   VIRGIN_ATLANTIC: "https://www.virginatlantic.com/",
+  VIRGIN_AUSTRALIA: "https://www.velocityfrequentflyer.com/",
   AVIANCA: "https://www.lifemiles.com/",
   CATHAY: "https://www.cathaypacific.com/",
   ETIHAD: "https://www.etihad.com/",
   ANA: "https://www.ana.co.jp/en/us/",
   JAL: "https://www.jal.co.jp/en/",
+  HAWAIIAN: "https://www.hawaiianairlines.com/",
+  JETBLUE: "https://trueblue.jetblue.com/",
+  TAP: "https://www.flytap.com/",
+  IBERIA: "https://www.iberia.com/",
 }
 
 export const PROGRAM_DISPLAY_NAMES: Record<string, string> = {
@@ -35,11 +40,16 @@ export const PROGRAM_DISPLAY_NAMES: Record<string, string> = {
   QATAR: "Qatar Privilege Club",
   SINGAPORE: "Singapore KrisFlyer",
   VIRGIN_ATLANTIC: "Virgin Atlantic",
+  VIRGIN_AUSTRALIA: "Velocity",
   AVIANCA: "LifeMiles",
   CATHAY: "Cathay Pacific Asia Miles",
   ETIHAD: "Etihad Guest",
   ANA: "ANA Mileage Club",
   JAL: "JAL Mileage Bank",
+  HAWAIIAN: "HawaiianMiles",
+  JETBLUE: "TrueBlue",
+  TAP: "TAP Miles&Go",
+  IBERIA: "Iberia Plus",
 }
 
 /**
@@ -87,7 +97,7 @@ export function buildProgramBookingUrl(
     case "QANTAS":
       return `https://www.qantas.com/au/en/book-a-trip/flights.html?from=${origin}&to=${destination}&departure=${date}&adults=1&children=0&infants=0&isUsingRewardPoints=true`
     default:
-      return PROGRAM_BOOKING_URLS[program] || "https://roame.travel"
+      return PROGRAM_BOOKING_URLS[program] || `https://www.google.com/travel/flights?q=flights+from+${origin}+to+${destination}+on+${date}`
   }
 }
 
