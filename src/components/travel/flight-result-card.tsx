@@ -133,7 +133,7 @@ export function FlightResultCard({ flight }: FlightResultCardProps) {
                 <p className="text-[11px] text-foreground-muted">+ ${flight.taxes} taxes</p>
               )}
               {programName && (
-                <p className="text-[10px] text-foreground-muted/70">{programName}</p>
+                <p className="text-[10px] text-foreground-muted">{programName}</p>
               )}
             </>
           ) : (
@@ -178,7 +178,7 @@ export function FlightResultCard({ flight }: FlightResultCardProps) {
 
       {/* Row 3: Flight numbers + equipment */}
       {flight.flightNumbers.length > 0 && (
-        <p className="text-[11px] text-foreground-muted/70 mt-0.5">
+        <p className="text-[11px] text-foreground-muted mt-0.5">
           {flight.flightNumbers.join(" / ")}
           {flight.equipment.length > 0 && ` · ${flight.equipment.join(", ")}`}
         </p>
@@ -196,7 +196,7 @@ export function FlightResultCard({ flight }: FlightResultCardProps) {
               {flight.cashSource === "exact-match" ? " (exact)" : flight.cashSource === "same-cabin" ? " (avg)" : ""}
             </span>
           )}
-          <span className="ml-auto text-[10px] text-foreground-muted/70">
+          <span className="ml-auto text-[10px] text-foreground-muted">
             Score: {flight.valueScore}/100
           </span>
         </div>
