@@ -695,6 +695,9 @@ model FinanceAccount {
   creditLimit           Float?
   apy                   Float?
   yieldType             String?
+  principalDeposited    Float?
+  yieldEarned           Float?      @default(0)
+  apyHistory            Json?       // Array<{ apy: number, date: string, note?: string }>
   currency              String                        @default("USD")
   isHidden              Boolean                       @default(false)
   createdAt             DateTime                      @default(now())

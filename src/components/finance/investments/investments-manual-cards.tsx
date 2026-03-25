@@ -7,6 +7,7 @@ interface ManualCardsProps {
   manualAccounts: Array<{
     id: string; name: string; subtype: string | null; currentBalance: number | null
     apy?: number | null; yieldType?: string | null
+    principalDeposited?: number | null; yieldEarned?: number | null
   }>
   editingId: string | null
   editValue: string
@@ -78,17 +79,29 @@ export function InvestmentsManualCards({
                   </button>
                 </div>
               ) : (
-                <div className="flex items-baseline justify-between">
-                  <span className="font-data text-lg font-bold text-foreground tabular-nums">{formatCurrency(acct.currentBalance ?? 0)}</span>
-                  <div className="flex items-center gap-1.5">
-                    {acct.apy ? (
-                      <span className="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-success/10 text-success tabular-nums">
-                        {(acct.apy * 100).toFixed(2)}% APY
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-foreground-muted">Manual</span>
-                    )}
+                <div>
+                  <div className="flex items-baseline justify-between">
+                    <span className="font-data text-lg font-bold text-foreground tabular-nums">{formatCurrency(acct.currentBalance ?? 0)}</span>
+                    <div className="flex items-center gap-1.5">
+                      {acct.apy ? (
+                        <span className="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-success/10 text-success tabular-nums">
+                          {(acct.apy * 100).toFixed(2)}% APY
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-foreground-muted">Manual</span>
+                      )}
+                    </div>
                   </div>
+                  {acct.apy && acct.yieldEarned != null && acct.yieldEarned > 0 && (
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-[10px] text-foreground-muted">
+                        Principal: {formatCurrency(acct.principalDeposited ?? 0)}
+                      </span>
+                      <span className="text-[10px] font-medium text-success">
+                        +{formatCurrency(acct.yieldEarned)} earned
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

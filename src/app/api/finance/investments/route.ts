@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth"
 import { apiError } from "@/lib/api-error"
 import { db } from "@/lib/db"
 import { mapFinanceError } from "@/lib/finance/error-map"
+import { updateYieldRate, correctYieldBalance } from "@/lib/finance/yield-accrual"
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod/v4"
 
@@ -26,7 +27,7 @@ export async function GET() {
           select: {
             id: true, name: true, type: true, subtype: true,
             currentBalance: true, currency: true, isHidden: true, updatedAt: true,
-            apy: true, yieldType: true,
+            apy: true, yieldType: true, principalDeposited: true, yieldEarned: true, apyHistory: true,
           },
         },
       },
@@ -62,6 +63,9 @@ export async function GET() {
           updatedAt: a.updatedAt,
           apy: a.apy,
           yieldType: a.yieldType,
+          principalDeposited: a.principalDeposited,
+          yieldEarned: a.yieldEarned,
+          apyHistory: a.apyHistory,
         })),
       }))
 
@@ -125,6 +129,9 @@ export async function POST(req: NextRequest) {
         currency: "USD",
         apy: parsed.apy ?? null,
         yieldType: parsed.yieldType ?? null,
+        principalDeposited: parsed.apy ? parsed.value : null,
+        yieldEarned: 0,
+        apyHistory: parsed.apy ? [{ apy: parsed.apy, date: new Date().toISOString().split("T")[0], note: "Initial rate" }] : undefined,
       },
     })
 
@@ -146,6 +153,9 @@ const updateSchema = z.object({
   value: z.number().min(0).optional(),
   apy: z.number().min(0).max(1).nullable().optional(),
   yieldType: z.enum(["fixed", "variable"]).nullable().optional(),
+  apyNote: z.string().max(200).optional(),             // note for rate change history
+  correctBalance: z.boolean().optional(),               // true = recalculate yieldEarned from principal
+  addPrincipal: z.number().min(0).optional(),           // additional deposit to principal
 })
 
 export async function PATCH(req: NextRequest) {
@@ -170,25 +180,45 @@ export async function PATCH(req: NextRequest) {
       return apiError("F9008", "Only manual investments can be updated this way", 400)
     }
 
+    // Handle APY rate change with history tracking
+    if (parsed.apy !== undefined && parsed.apy !== null && parsed.apy !== account.apy) {
+      await updateYieldRate(parsed.accountId, parsed.apy, parsed.apyNote)
+    }
+
+    // Handle balance correction (recalculates yieldEarned from principal)
+    if (parsed.value !== undefined && parsed.correctBalance) {
+      await correctYieldBalance(parsed.accountId, parsed.value)
+    }
+
+    // Handle additional principal deposit
+    if (parsed.addPrincipal && parsed.addPrincipal > 0) {
+      const currentPrincipal = account.principalDeposited ?? account.currentBalance ?? 0
+      const currentBalance = account.currentBalance ?? 0
+      await db.financeAccount.update({
+        where: { id: parsed.accountId },
+        data: {
+          principalDeposited: Math.round((currentPrincipal + parsed.addPrincipal) * 100) / 100,
+          currentBalance: Math.round((currentBalance + parsed.addPrincipal) * 100) / 100,
+        },
+      })
+    }
+
     const data: Record<string, unknown> = {}
     if (parsed.name !== undefined) {
       data.name = parsed.name
       data.officialName = parsed.name
     }
-    if (parsed.value !== undefined) {
+    if (parsed.value !== undefined && !parsed.correctBalance && !parsed.addPrincipal) {
       data.currentBalance = parsed.value
-    }
-    if (parsed.apy !== undefined) {
-      data.apy = parsed.apy
     }
     if (parsed.yieldType !== undefined) {
       data.yieldType = parsed.yieldType
     }
 
-    const updated = await db.financeAccount.update({
-      where: { id: parsed.accountId },
-      data,
-    })
+    // Only update generic fields if there are any
+    const updated = Object.keys(data).length > 0
+      ? await db.financeAccount.update({ where: { id: parsed.accountId }, data })
+      : await db.financeAccount.findUnique({ where: { id: parsed.accountId } })
 
     return NextResponse.json(updated)
   } catch (err) {

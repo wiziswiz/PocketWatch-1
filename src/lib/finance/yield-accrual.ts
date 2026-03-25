@@ -1,6 +1,6 @@
 /**
  * Daily yield accrual for manual investment accounts with APY.
- * Compounds balance: newBalance = currentBalance * (1 + apy / 365)
+ * Tracks principal vs earned interest separately.
  * Idempotent: only accrues once per calendar day (checks updatedAt).
  */
 
@@ -13,7 +13,7 @@ function todayUtc(): Date {
 
 /**
  * Accrue daily yield for all manual investment accounts with APY set.
- * Skips accounts already updated today (idempotent).
+ * Updates currentBalance AND yieldEarned. Skips accounts already updated today.
  */
 export async function accrueYield(userId: string): Promise<{ updated: number }> {
   const today = todayUtc()
@@ -25,7 +25,7 @@ export async function accrueYield(userId: string): Promise<{ updated: number }> 
       currentBalance: { not: null },
       institution: { provider: "manual" },
     },
-    select: { id: true, currentBalance: true, apy: true, updatedAt: true },
+    select: { id: true, currentBalance: true, apy: true, yieldEarned: true, updatedAt: true },
   })
 
   let updated = 0
@@ -42,11 +42,13 @@ export async function accrueYield(userId: string): Promise<{ updated: number }> 
     if (lastUpdate.getTime() >= today.getTime()) continue
 
     const dailyRate = acct.apy / 365
-    const newBalance = Math.round(acct.currentBalance * (1 + dailyRate) * 100) / 100
+    const dailyYield = Math.round(acct.currentBalance * dailyRate * 100) / 100
+    const newBalance = Math.round((acct.currentBalance + dailyYield) * 100) / 100
+    const newYieldEarned = Math.round(((acct.yieldEarned ?? 0) + dailyYield) * 100) / 100
 
     await db.financeAccount.update({
       where: { id: acct.id },
-      data: { currentBalance: newBalance },
+      data: { currentBalance: newBalance, yieldEarned: newYieldEarned },
     })
 
     updated++
@@ -57,4 +59,56 @@ export async function accrueYield(userId: string): Promise<{ updated: number }> 
   }
 
   return { updated }
+}
+
+/**
+ * Update APY for a yield account — logs the change in apyHistory.
+ */
+export async function updateYieldRate(
+  accountId: string,
+  newApy: number,
+  note?: string,
+): Promise<void> {
+  const account = await db.financeAccount.findUnique({
+    where: { id: accountId },
+    select: { apy: true, apyHistory: true },
+  })
+  if (!account) return
+
+  const history = (account.apyHistory as Array<{ apy: number; date: string; note?: string }>) ?? []
+  const entry = {
+    apy: account.apy ?? 0,
+    date: new Date().toISOString().split("T")[0],
+    ...(note ? { note } : {}),
+  }
+
+  await db.financeAccount.update({
+    where: { id: accountId },
+    data: {
+      apy: newApy,
+      apyHistory: [...history, entry],
+    },
+  })
+}
+
+/**
+ * Correct the balance of a yield account — recalculates yieldEarned from principal.
+ */
+export async function correctYieldBalance(
+  accountId: string,
+  actualBalance: number,
+): Promise<void> {
+  const account = await db.financeAccount.findUnique({
+    where: { id: accountId },
+    select: { principalDeposited: true },
+  })
+  if (!account) return
+
+  const principal = account.principalDeposited ?? 0
+  const yieldEarned = Math.max(0, Math.round((actualBalance - principal) * 100) / 100)
+
+  await db.financeAccount.update({
+    where: { id: accountId },
+    data: { currentBalance: actualBalance, yieldEarned },
+  })
 }
