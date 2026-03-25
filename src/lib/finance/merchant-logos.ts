@@ -304,7 +304,7 @@ const MERCHANT_DOMAINS: Record<string, string> = {
 }
 
 function faviconUrl(domain: string): string {
-  return `https://www.google.com/s2/favicons?sz=128&domain=${domain}`
+  return `https://logo.clearbit.com/${domain}?size=128`
 }
 
 /** Try to match a merchant name against the known domains map */

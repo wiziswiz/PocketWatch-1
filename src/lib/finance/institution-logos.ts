@@ -1,35 +1,38 @@
 /**
- * Institution logo resolution with static map + Google favicon fallback.
+ * Institution logo resolution with static map + Clearbit logo fallback.
+ * Clearbit returns high-res (800px+) logos vs Google favicons (128px max).
  */
 
-// Common Plaid institution IDs mapped to logo URLs
-// These are the most common US banks in Plaid Sandbox and production
+function logoUrl(domain: string): string {
+  return `https://logo.clearbit.com/${domain}?size=256`
+}
+
+// Common Plaid institution IDs mapped to high-quality logo URLs
 const INSTITUTION_LOGOS: Record<string, string> = {
-  // Plaid institution IDs → high-quality logo URLs
-  ins_3: "https://www.google.com/s2/favicons?sz=128&domain=chase.com",
-  ins_4: "https://www.google.com/s2/favicons?sz=128&domain=wellsfargo.com",
-  ins_5: "https://www.google.com/s2/favicons?sz=128&domain=bankofamerica.com",
-  ins_6: "https://www.google.com/s2/favicons?sz=128&domain=citi.com",
-  ins_10: "https://www.google.com/s2/favicons?sz=128&domain=americanexpress.com",
-  ins_12: "https://www.google.com/s2/favicons?sz=128&domain=fidelity.com",
-  ins_13: "https://www.google.com/s2/favicons?sz=128&domain=schwab.com",
-  ins_14: "https://www.google.com/s2/favicons?sz=128&domain=tdbank.com",
-  ins_15: "https://www.google.com/s2/favicons?sz=128&domain=usbank.com",
-  ins_16: "https://www.google.com/s2/favicons?sz=128&domain=capitalone.com",
-  ins_19: "https://www.google.com/s2/favicons?sz=128&domain=pnc.com",
-  ins_20: "https://www.google.com/s2/favicons?sz=128&domain=ally.com",
-  ins_21: "https://www.google.com/s2/favicons?sz=128&domain=discover.com",
-  ins_25: "https://www.google.com/s2/favicons?sz=128&domain=marcus.com",
-  ins_27: "https://www.google.com/s2/favicons?sz=128&domain=navyfederal.org",
-  ins_29: "https://www.google.com/s2/favicons?sz=128&domain=suntrust.com",
-  ins_32: "https://www.google.com/s2/favicons?sz=128&domain=regions.com",
-  ins_33: "https://www.google.com/s2/favicons?sz=128&domain=53.com",
-  ins_34: "https://www.google.com/s2/favicons?sz=128&domain=keybank.com",
-  ins_35: "https://www.google.com/s2/favicons?sz=128&domain=citizensbank.com",
-  ins_100103: "https://www.google.com/s2/favicons?sz=128&domain=sofi.com",
-  ins_100089: "https://www.google.com/s2/favicons?sz=128&domain=chime.com",
-  ins_116284: "https://www.google.com/s2/favicons?sz=128&domain=venmo.com",
-  ins_127989: "https://www.google.com/s2/favicons?sz=128&domain=robinhood.com",
+  ins_3: logoUrl("chase.com"),
+  ins_4: logoUrl("wellsfargo.com"),
+  ins_5: logoUrl("bankofamerica.com"),
+  ins_6: logoUrl("citi.com"),
+  ins_10: logoUrl("americanexpress.com"),
+  ins_12: logoUrl("fidelity.com"),
+  ins_13: logoUrl("schwab.com"),
+  ins_14: logoUrl("tdbank.com"),
+  ins_15: logoUrl("usbank.com"),
+  ins_16: logoUrl("capitalone.com"),
+  ins_19: logoUrl("pnc.com"),
+  ins_20: logoUrl("ally.com"),
+  ins_21: logoUrl("discover.com"),
+  ins_25: logoUrl("marcus.com"),
+  ins_27: logoUrl("navyfederal.org"),
+  ins_29: logoUrl("suntrust.com"),
+  ins_32: logoUrl("regions.com"),
+  ins_33: logoUrl("53.com"),
+  ins_34: logoUrl("keybank.com"),
+  ins_35: logoUrl("citizensbank.com"),
+  ins_100103: logoUrl("sofi.com"),
+  ins_100089: logoUrl("chime.com"),
+  ins_116284: logoUrl("venmo.com"),
+  ins_127989: logoUrl("robinhood.com"),
 }
 
 // Institution name → domain mapping for Google favicon fallback
@@ -105,17 +108,17 @@ export function resolveInstitutionLogo(
     return INSTITUTION_LOGOS[institutionId]
   }
 
-  // 3. Clearbit from institution name
+  // 3. Clearbit logo from institution name
   const nameLower = institutionName.toLowerCase().trim()
   const domain = NAME_TO_DOMAIN[nameLower]
   if (domain) {
-    return `https://www.google.com/s2/favicons?sz=128&domain=${domain}`
+    return logoUrl(domain)
   }
 
   // Try partial match
   for (const [key, dom] of Object.entries(NAME_TO_DOMAIN)) {
     if (nameLower.includes(key)) {
-      return `https://www.google.com/s2/favicons?sz=128&domain=${dom}`
+      return logoUrl(dom)
     }
   }
 
