@@ -274,6 +274,9 @@ function streamCLIWithSystemPrompt(
   const bin = resolveClaudeBin()
   return new Promise((resolve, reject) => {
     const { CLAUDECODE, CLAUDE_CODE, CLAUDE_CODE_ENTRYPOINT, ...cleanEnv } = process.env
+    // --dangerously-skip-permissions: required for headless server-side invocation — Claude CLI
+    // cannot prompt interactively in a subprocess. The AI only has access to PocketWatch's own
+    // tool executors (finance/flight queries), not filesystem or shell.
     const args = ["-p", "--output-format", "text", "--system-prompt", systemPrompt, "--dangerously-skip-permissions"]
     if (model) args.push("--model", model)
     const child = spawn(bin, args, {

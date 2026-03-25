@@ -64,6 +64,7 @@ export async function getFlightSearchSummary(userId: string): Promise<string> {
       totalCost: r.totalCost,
       cppValue: r.cppValue,
     })),
+    insights: data.insights.map((i) => ({ type: i.type, priority: i.priority, title: i.title, detail: i.detail })),
     routeSweetSpots: data.routeSweetSpots,
     balances: data.balances.map((b) => ({
       program: b.program,
