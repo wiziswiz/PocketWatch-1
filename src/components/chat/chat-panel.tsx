@@ -113,16 +113,18 @@ export function ChatPanel() {
           {messages.length === 0 ? (
             <EmptyState />
           ) : (
-            messages.map((msg) => (
-              <ChatMessageBubble key={msg.id} message={msg} />
-            ))
+            messages.map((msg, i) => {
+              // Skip empty assistant message while streaming — loading indicator handles it
+              if (isStreaming && msg.role === "assistant" && !msg.content && i === messages.length - 1) return null
+              return <ChatMessageBubble key={msg.id} message={msg} />
+            })
           )}
 
           {/* Streaming indicator */}
           {isStreaming && messages[messages.length - 1]?.role === "assistant" &&
             !messages[messages.length - 1]?.content && (
               <div className="flex justify-start mb-3">
-                <div className="bg-card border border-card-border rounded-2xl rounded-bl-md px-4 py-3">
+                <div className="bg-card border border-card-border rounded-2xl rounded-bl-md px-4 py-2.5">
                   <div className="flex gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-foreground-muted animate-bounce" style={{ animationDelay: "0ms" }} />
                     <span className="w-1.5 h-1.5 rounded-full bg-foreground-muted animate-bounce" style={{ animationDelay: "150ms" }} />

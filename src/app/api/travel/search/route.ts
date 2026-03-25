@@ -11,7 +11,6 @@ import { runSearch, type SearchProgress } from "@/lib/travel/search-orchestrator
 import { cardProfilesToBalances } from "@/lib/travel/balance-adapter"
 import { isSessionExpired, refreshFirebaseToken, buildRoameSession } from "@/lib/travel/roame-auth"
 import { isPointMeTokenExpired, refreshPointMeToken } from "@/lib/travel/pointme-auth"
-import { setUserFlightResults } from "@/lib/travel/flight-results-cache"
 import type { SearchConfig, RoameCredentials } from "@/types/travel"
 
 export const dynamic = "force-dynamic"
@@ -183,7 +182,12 @@ export async function GET(req: Request) {
 
       try {
         const results = await runSearch(config, { roameSession, serpApiKey, atfApiKey, pointmeToken }, balances, onProgress)
-        setUserFlightResults(user.id, results)
+        // Persist to DB so chat tools can access all flights
+        db.flightSearchResult.upsert({
+          where: { userId: user.id },
+          create: { userId: user.id, results: JSON.parse(JSON.stringify(results)), searchedAt: new Date() },
+          update: { results: JSON.parse(JSON.stringify(results)), searchedAt: new Date() },
+        }).catch((err) => console.warn("[travel] Failed to persist flight results:", err))
         send("result", results)
       } catch (err) {
         send("error", { error: (err as Error).message })

@@ -1,15 +1,21 @@
 /**
- * PocketLLM flight tool executors — read from the server-side flight results cache.
+ * PocketLLM flight tool executors — read from DB-persisted flight search results.
  */
 
-import { getUserFlightResults } from "@/lib/travel/flight-results-cache"
+import { db } from "@/lib/db"
+import type { DashboardResults } from "@/types/travel"
 
 type ToolInput = Record<string, unknown>
 
 const NO_FLIGHTS = JSON.stringify({ error: "No recent flight search found. The user needs to search for flights first." })
 
-export function getFlightSearchSummary(userId: string): string {
-  const data = getUserFlightResults(userId)
+async function loadFlightResults(userId: string): Promise<DashboardResults | null> {
+  const row = await db.flightSearchResult.findUnique({ where: { userId } })
+  return row ? (row.results as unknown as DashboardResults) : null
+}
+
+export async function getFlightSearchSummary(userId: string): Promise<string> {
+  const data = await loadFlightResults(userId)
   if (!data) return NO_FLIGHTS
 
   const flights = data.flights
@@ -68,8 +74,8 @@ export function getFlightSearchSummary(userId: string): string {
   })
 }
 
-export function getFlightResults(userId: string, input: ToolInput): string {
-  const data = getUserFlightResults(userId)
+export async function getFlightResults(userId: string, input: ToolInput): Promise<string> {
+  const data = await loadFlightResults(userId)
   if (!data) return NO_FLIGHTS
 
   let flights = [...data.flights]
