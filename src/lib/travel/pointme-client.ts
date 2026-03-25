@@ -283,6 +283,10 @@ function routesToUnified(routes: PointMeRoute[], date: string, searchOrigin: str
     const durationMinutes = parseTimeString(route.times.flight) + parseTimeString(route.times.layover)
     const departureTime = route.connections[0]?.departure.when || ""
     const arrivalTime = route.connections[route.connections.length - 1]?.arrival.when || ""
+    // Extract actual departure date from the route (not the search date)
+    const actualDate = departureTime && /^\d{4}-\d{2}-\d{2}/.test(departureTime)
+      ? departureTime.slice(0, 10)
+      : date
     const cabinClass = normalizeCabin(
       route.connections.find(c => c.cabin.toLowerCase() !== "economy")?.cabin
         || route.connections[0]?.cabin
@@ -336,9 +340,9 @@ function routesToUnified(routes: PointMeRoute[], date: string, searchOrigin: str
         cppValue,
         roameScore: null,
         availableSeats: null,
-        bookingUrl: buildProgramBookingUrl(pwProgram, origin, destination, date, cabinClass),
+        bookingUrl: buildProgramBookingUrl(pwProgram, origin, destination, actualDate, cabinClass),
         fareClass: cabinClass,
-        travelDate: date,
+        travelDate: actualDate,
       })
 
       // Also emit the cheapest credit card transfer path as a separate result
@@ -373,9 +377,9 @@ function routesToUnified(routes: PointMeRoute[], date: string, searchOrigin: str
           cppValue: transferCpp,
           roameScore: null,
           availableSeats: null,
-          bookingUrl: buildProgramBookingUrl(pwProgram, origin, destination, date, cabinClass),
+          bookingUrl: buildProgramBookingUrl(pwProgram, origin, destination, actualDate, cabinClass),
           fareClass: cabinClass,
-          travelDate: date,
+          travelDate: actualDate,
         })
       }
     }
