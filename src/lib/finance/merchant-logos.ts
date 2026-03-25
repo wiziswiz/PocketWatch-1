@@ -199,11 +199,21 @@ const MERCHANT_DOMAINS: Record<string, string> = {
   "wired": "wired.com",
   "the information": "theinformation.com",
 
+  // Hotels & travel
+  hyatt: "hyatt.com",
+  "world of hyatt": "hyatt.com",
+  marriott: "marriott.com",
+  hilton: "hilton.com",
+  ihg: "ihg.com",
+  "holiday inn": "ihg.com",
+  wyndham: "wyndham.com",
+
   // Telecom & utilities
   "t-mobile": "t-mobile.com",
   tmobile: "t-mobile.com",
   "at&t": "att.com",
-  att: "att.com",
+  "att wireless": "att.com",
+  "att.com": "att.com",
   verizon: "verizon.com",
   xfinity: "xfinity.com",
   comcast: "xfinity.com",
