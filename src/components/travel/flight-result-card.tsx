@@ -103,6 +103,11 @@ export function FlightResultCard({ flight }: FlightResultCardProps) {
             )}>
               {SOURCE_LABELS[flight.source] || flight.source}
             </span>
+            {flight.sources && flight.sources.length > 1 && (
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-card-border/30 text-foreground-muted">
+                {flight.sources.length} sources
+              </span>
+            )}
             {flight.searchOrigin && flight.searchDestination && (
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-card-border/50 text-foreground-muted">
                 {flight.searchOrigin}-{flight.searchDestination}

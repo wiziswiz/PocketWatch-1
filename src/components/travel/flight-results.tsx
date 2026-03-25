@@ -94,11 +94,13 @@ export function FlightResults({ flights, onSearchCabin, isMultiSearch }: FlightR
   const [airportFilter, setAirportFilter] = useState<string>("all")
   const [dateFilter, setDateFilter] = useState<string>("all")
 
-  // Unique sources for filter pills
+  // Unique sources for filter pills (count from sources[] for deduped flights)
   const sources = useMemo(() => {
     const counts = new Map<string, number>()
     for (const f of flights) {
-      counts.set(f.source, (counts.get(f.source) || 0) + 1)
+      for (const s of f.sources ?? [f.source]) {
+        counts.set(s, (counts.get(s) || 0) + 1)
+      }
     }
     return Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1])
@@ -130,7 +132,7 @@ export function FlightResults({ flights, onSearchCabin, isMultiSearch }: FlightR
     const max = parseInt(stopsFilter)
     filtered = filtered.filter(f => f.stops <= max)
   }
-  if (sourceFilter !== "all") filtered = filtered.filter(f => f.source === sourceFilter)
+  if (sourceFilter !== "all") filtered = filtered.filter(f => (f.sources ?? [f.source]).includes(sourceFilter))
   if (airportFilter !== "all") {
     const [orig, dest] = airportFilter.split("-")
     filtered = filtered.filter(f => f.searchOrigin === orig && f.searchDestination === dest)

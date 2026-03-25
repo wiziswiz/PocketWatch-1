@@ -301,3 +301,49 @@ export function scoreFlights(
 
   return { scored, insights }
 }
+
+// ─── Cross-Provider Deduplication ──────────────────────────────
+
+/** Merge duplicate flights across providers. Keeps the highest-scoring result per unique flight. */
+export function deduplicateFlights(flights: ValueScoredFlight[]): ValueScoredFlight[] {
+  const groups = new Map<string, ValueScoredFlight[]>()
+
+  for (const f of flights) {
+    const program = f.type === "award" ? (f.pointsProgram || "UNKNOWN") : "CASH"
+    const key = `${f.origin}-${f.destination}-${f.travelDate || ""}-${f.cabinClass}-${program}-${f.stops}-${f.airline}`
+    const group = groups.get(key)
+    if (group) {
+      group.push(f)
+    } else {
+      groups.set(key, [f])
+    }
+  }
+
+  const result: ValueScoredFlight[] = []
+  for (const group of groups.values()) {
+    if (group.length === 1) {
+      const single = { ...group[0]!, sources: [group[0]!.source] }
+      result.push(single)
+      continue
+    }
+
+    group.sort((a, b) => b.valueScore - a.valueScore)
+    const best = { ...group[0]! }
+    best.sources = [...new Set(group.map(f => f.source))]
+
+    // Use lowest points cost across sources
+    if (best.type === "award") {
+      const pointsCosts = group.filter(f => f.points != null).map(f => f.points!)
+      if (pointsCosts.length > 0) {
+        const lowest = Math.min(...pointsCosts)
+        if (lowest < (best.points || Infinity)) {
+          best.points = lowest
+        }
+      }
+    }
+
+    result.push(best)
+  }
+
+  return result
+}

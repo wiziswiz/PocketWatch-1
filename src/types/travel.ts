@@ -41,6 +41,8 @@ export interface UnifiedFlightResult {
   searchOrigin?: string
   searchDestination?: string
   searchDate?: string
+  // Cross-provider deduplication
+  sources?: string[]
 }
 
 export interface ValueScoredFlight extends UnifiedFlightResult {

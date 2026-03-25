@@ -16,7 +16,7 @@ import { searchRoame, roameFaresToUnified } from "./roame-client"
 import { searchGoogleFlights } from "./google-flights-client"
 import { searchATF } from "./atf-client"
 import { searchPointMe } from "./pointme-client"
-import { scoreFlights } from "./value-engine"
+import { scoreFlights, deduplicateFlights } from "./value-engine"
 import { getSweetSpotsForRoute } from "./sweet-spots"
 import { expandFlexDates, tagResults, generateWarnings } from "./search-helpers"
 
@@ -387,11 +387,12 @@ export async function runSearch(
     await Promise.allSettled(returnPromises)
   }
 
-  // Run value engine
+  // Run value engine + deduplicate cross-provider results
   const { scored, insights } = scoreFlights(allFlights, balances, config.origin, config.destination)
   scored.sort((a, b) => b.valueScore - a.valueScore)
+  const deduped = deduplicateFlights(scored)
 
-  const recommendations = generateRecommendations(scored, balances)
+  const recommendations = generateRecommendations(deduped, balances)
   const warnings = generateWarnings(balances)
   const routeSpots = getSweetSpotsForRoute(config.origin, config.destination)
   const routeSweetSpots = routeSpots.map(s => ({
@@ -416,7 +417,7 @@ export async function runSearch(
       } : {}),
     },
     balances,
-    flights: scored,
+    flights: deduped,
     recommendations,
     insights,
     routeSweetSpots,
