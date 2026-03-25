@@ -21,8 +21,10 @@ export function tagResults(
   date: string,
   leg?: "outbound" | "return",
 ): UnifiedFlightResult[] {
+  const prefix = `${origin}-${destination}-${date}`
   return flights.map((f) => ({
     ...f,
+    id: `${prefix}:${f.id}`,
     searchOrigin: origin,
     searchDestination: destination,
     searchDate: date,

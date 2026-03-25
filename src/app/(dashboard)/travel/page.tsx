@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useFlightSearch, useTravelBalances } from "@/hooks/travel"
 import { useChat } from "@/hooks/use-chat"
 import { FlightSearchForm } from "@/components/travel/flight-search-form"
-import { FlightResults, type FlightResultsHandle } from "@/components/travel/flight-results"
+import { FlightResults } from "@/components/travel/flight-results"
 import { PocketWatchPicks } from "@/components/travel/pocketwatch-picks"
 import { RecommendationsPanel } from "@/components/travel/recommendations-panel"
 import { BalancesPanel } from "@/components/travel/balances-panel"
@@ -15,8 +15,6 @@ export default function TravelPage() {
   const { data: balancesData } = useTravelBalances()
   const { isOpen: chatOpen, setPageContext } = useChat()
   const [lastConfig, setLastConfig] = useState<SearchConfig | null>(null)
-  const flightResultsRef = useRef<FlightResultsHandle>(null)
-
   // Tell PocketLLM about flight results so the AI can answer questions
   useEffect(() => {
     if (results) {
@@ -31,7 +29,6 @@ export default function TravelPage() {
   }, [results, setPageContext])
 
   const handlePickClick = useCallback((flightId: string) => {
-    flightResultsRef.current?.clearFilters()
     requestAnimationFrame(() => {
       const el = document.getElementById(`flight-${flightId}`)
       if (el) {
@@ -114,7 +111,6 @@ export default function TravelPage() {
 
             {/* Flight results */}
             <FlightResults
-              ref={flightResultsRef}
               flights={results.flights}
               onSearchCabin={handleSearchCabin}
               isMultiSearch={!!(results.meta.origins || results.meta.destinations || results.meta.flexDates)}

@@ -172,6 +172,7 @@ export function atfToUnified(atfResults: ATFResult[]): UnifiedFlightResult[] {
     const { airline, origin, destination, date } = result
     const meta = ATF_AIRLINE_META[airline]
     const availability = result.response.data.availability
+    if (!availability?.cabins) continue
     const cabinEntries = Object.entries(availability.cabins) as [string, ATFCabin][]
 
     for (const [cabinKey, cabin] of cabinEntries) {
