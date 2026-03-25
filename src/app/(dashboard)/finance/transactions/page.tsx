@@ -6,7 +6,7 @@ import { toast } from "sonner"
 import {
   useFinanceTransactions, useFinanceAccounts,
   useAutoCategorize, useFinanceDeepInsights,
-  useUpdateTransactionCategory,
+  useUpdateTransactionCategory, useReviewCount,
 } from "@/hooks/use-finance"
 import { FinancePageHeader } from "@/components/finance/finance-page-header"
 import { FinanceEmpty } from "@/components/finance/finance-empty"
@@ -77,8 +77,11 @@ export default function FinanceTransactionsPage() {
   const from = total > 0 ? (page - 1) * 50 + 1 : 0
   const to = Math.min(page * 50, total)
 
+  const { data: reviewData } = useReviewCount()
+  const reviewCount = reviewData?.count ?? 0
   const hasFilters = search || category || accountId || dateRange !== "this-month"
   const uncategorizedCount = deep?.uncategorizedCount ?? 0
+  const needsAttention = uncategorizedCount + reviewCount
 
   return (
     <div className="space-y-6">
@@ -96,8 +99,8 @@ export default function FinanceTransactionsPage() {
         </Link>
       </div>
 
-      {/* Uncategorized Alert */}
-      {uncategorizedCount > 0 && (
+      {/* Categorization Alert — shows for uncategorized OR needs-review */}
+      {needsAttention > 0 && (
         <div className="bg-amber-500/15 border-2 border-amber-500/40 rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-amber-500/25 flex items-center justify-center">
@@ -105,7 +108,9 @@ export default function FinanceTransactionsPage() {
             </div>
             <div>
               <p className="text-sm font-bold text-foreground">
-                {uncategorizedCount} uncategorized transaction{uncategorizedCount > 1 ? "s" : ""}
+                {uncategorizedCount > 0 && `${uncategorizedCount} uncategorized`}
+                {uncategorizedCount > 0 && reviewCount > 0 && " + "}
+                {reviewCount > 0 && `${reviewCount} need review`}
               </p>
               <p className="text-xs text-foreground-muted/80">Categorize for better insights</p>
             </div>
