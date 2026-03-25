@@ -126,7 +126,6 @@ const DEAL_TYPE_TO_TAGS: Record<string, string> = {
 
 function mapCabinClass(searchClass: string): string {
   if (searchClass === "ECON") return "ECONOMY"
-  if (searchClass === "PREM" || searchClass === "both") return "BUSINESS"
   return "BUSINESS"
 }
 
@@ -276,10 +275,11 @@ function routesToUnified(routes: PointMeRoute[], date: string, searchOrigin: str
     const destination = route.connections[route.connections.length - 1]?.arrival.airport || ""
     const airlines = [...new Set(route.connections.map(c => c.airline))]
     const flightNumbers = route.connections.flatMap(c => c.flight)
-    const airports = [
+    const rawAirports = [
       route.connections[0]?.departure.airport,
       ...route.connections.map(c => c.arrival.airport),
     ].filter(Boolean) as string[]
+    const airports = rawAirports.filter((a, i) => i === 0 || a !== rawAirports[i - 1])
     const durationMinutes = parseTimeString(route.times.flight) + parseTimeString(route.times.layover)
     const departureTime = route.connections[0]?.departure.when || ""
     const arrivalTime = route.connections[route.connections.length - 1]?.arrival.when || ""

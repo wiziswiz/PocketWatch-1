@@ -242,23 +242,26 @@ async function searchOneLeg(
     )
   }
 
-  // point.me search
+  // point.me search (split "both" into ECON + PREM like Roame)
   if (credentials.pointmeToken) {
-    promises.push(
-      (async () => {
-        onProgress?.({ source: `${prefix}pointme`, status: "searching" })
-        const flights = await searchPointMe(
-          credentials.pointmeToken!, origin, destination, date, searchClass,
-        )
-        if (leg) flights.forEach(f => f.leg = leg)
-        allFlights.push(...flights)
-        completionPct[`${prefix}pointme`] = flights.length > 0 ? 100 : 0
-        onProgress?.({ source: `${prefix}pointme`, status: "complete", flights: flights.length })
-      })().catch(err => {
-        completionPct[`${prefix}pointme`] = 0
-        onProgress?.({ source: `${prefix}pointme`, status: "failed", error: (err as Error).message })
-      })
-    )
+    const pmClasses = searchClass === "both" ? ["ECON", "PREM"] : [searchClass]
+    for (const cls of pmClasses) {
+      promises.push(
+        (async () => {
+          onProgress?.({ source: `${prefix}pointme`, status: "searching" })
+          const flights = await searchPointMe(
+            credentials.pointmeToken!, origin, destination, date, cls,
+          )
+          if (leg) flights.forEach(f => f.leg = leg)
+          allFlights.push(...flights)
+          completionPct[`${prefix}pointme`] = flights.length > 0 ? 100 : 0
+          onProgress?.({ source: `${prefix}pointme`, status: "complete", flights: flights.length })
+        })().catch(err => {
+          completionPct[`${prefix}pointme`] = 0
+          onProgress?.({ source: `${prefix}pointme`, status: "failed", error: (err as Error).message })
+        })
+      )
+    }
   }
 
   await Promise.allSettled(promises)
