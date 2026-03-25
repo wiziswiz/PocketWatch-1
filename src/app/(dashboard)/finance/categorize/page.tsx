@@ -27,14 +27,16 @@ export default function CategorizePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Categorize</h1>
-          <p className="text-sm text-foreground-muted mt-0.5">
+          <p className="text-sm text-foreground-muted mt-0.5" suppressHydrationWarning>
             {mode === "review"
               ? uncategorizedCount > 0
                 ? `${uncategorizedCount} uncategorized`
                 : reviewCount > 0
                   ? `${reviewCount} need review`
                   : "All caught up"
-              : `${uncategorizedCount} uncategorized`}
+              : uncategorizedCount > 0
+                ? `${uncategorizedCount} uncategorized`
+                : "All caught up"}
           </p>
         </div>
         <div className="flex items-center gap-2">

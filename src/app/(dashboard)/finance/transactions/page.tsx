@@ -82,10 +82,19 @@ export default function FinanceTransactionsPage() {
 
   return (
     <div className="space-y-6">
-      <FinancePageHeader
-        title="Transactions"
-        subtitle={isLoading ? undefined : `${total.toLocaleString()} transactions`}
-      />
+      <div className="flex items-center justify-between">
+        <FinancePageHeader
+          title="Transactions"
+          subtitle={isLoading ? undefined : `${total.toLocaleString()} transactions`}
+        />
+        <Link
+          href="/finance/categorize?mode=rebuild"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-card-border rounded-lg hover:bg-background-secondary transition-colors"
+        >
+          <span className="material-symbols-rounded" style={{ fontSize: 14 }}>auto_awesome</span>
+          AI Categorize
+        </Link>
+      </div>
 
       {/* Uncategorized Alert */}
       {uncategorizedCount > 0 && (
