@@ -70,17 +70,21 @@ export function selectPicks(flights: ReadonlyArray<ValueScoredFlight>): PickCand
   // Prefer affordable flights, but fall back to any award if none are affordable
   const hasAffordable = candidates.some((f) => f.type === "award" && f.canAfford)
 
-  // 1. PocketWatch Pick — best overall award (prefer affordable)
+  // 1. PocketWatch Pick — best overall award (prefer affordable, max 2 stops)
   const pocketwatchPick = [...candidates]
-    .filter((f) => f.type === "award" && f.valueScore > 0 && (!hasAffordable || f.canAfford))
+    .filter((f) => f.type === "award" && f.valueScore > 0 && f.stops <= 2 && (!hasAffordable || f.canAfford))
     .sort((a, b) => b.valueScore - a.valueScore)[0]
 
   addPick("pocketwatch-pick", pocketwatchPick)
 
-  // 2. Best Value — highest CPP (skipped if same as PocketWatch Pick via usedIds)
+  // 2. Best Value — highest CPP, penalizing excessive duration (max 2 stops)
   const bestValue = [...candidates]
-    .filter((f) => f.type === "award" && f.realCpp != null && f.realCpp > 0 && !usedIds.has(f.id) && (!hasAffordable || f.canAfford))
-    .sort((a, b) => (b.realCpp ?? 0) - (a.realCpp ?? 0))[0]
+    .filter((f) => f.type === "award" && f.realCpp != null && f.realCpp > 0 && f.stops <= 2 && !usedIds.has(f.id) && (!hasAffordable || f.canAfford))
+    .sort((a, b) => {
+      const aCpp = (a.realCpp ?? 0) - Math.max(0, a.durationMinutes - 720) / 600
+      const bCpp = (b.realCpp ?? 0) - Math.max(0, b.durationMinutes - 720) / 600
+      return bCpp - aCpp
+    })[0]
 
   addPick("best-value", bestValue)
 

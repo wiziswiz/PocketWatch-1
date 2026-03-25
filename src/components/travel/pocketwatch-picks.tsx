@@ -73,7 +73,7 @@ function PickCard({ pick, isMultiSearch, onPickClick }: PickCardProps) {
     <button
       onClick={handleClick}
       className={cn(
-        "flex-shrink-0 w-[220px] snap-start card p-3 text-left",
+        "flex-shrink-0 w-[240px] snap-start card p-3 text-left",
         "hover:translate-y-[-1px] hover:shadow-md transition-all duration-200 cursor-pointer",
       )}
       style={{ borderLeft: `2px solid ${accent}` }}
@@ -109,14 +109,24 @@ function PickCard({ pick, isMultiSearch, onPickClick }: PickCardProps) {
         </span>
       </p>
 
-      {/* Route + duration */}
-      <p className="text-[11px] text-foreground-muted mt-0.5 truncate">
-        {flight.airports.join(" → ")} · {formatDuration(flight.durationMinutes)} · {flight.stops === 0 ? "Nonstop" : `${flight.stops} stop${flight.stops > 1 ? "s" : ""}`}
+      {/* Route */}
+      <p className="text-[11px] text-foreground-muted mt-1 truncate">
+        {flight.airports.join(" → ")}
       </p>
+
+      {/* Duration + stops */}
+      <div className="flex items-center gap-2 mt-0.5 text-[11px]">
+        <span className="font-medium text-foreground tabular-nums">
+          {formatDuration(flight.durationMinutes)}
+        </span>
+        <span className="text-foreground-muted">
+          {flight.stops === 0 ? "Nonstop" : `${flight.stops} stop${flight.stops > 1 ? "s" : ""}`}
+        </span>
+      </div>
 
       {/* Multi-search route tag */}
       {isMultiSearch && flight.searchOrigin && flight.searchDestination && (
-        <span className="text-[10px] font-mono px-1 py-0.5 mt-1 inline-block rounded bg-card-border/50 text-foreground-muted">
+        <span className="text-[9px] font-mono px-1 py-0.5 mt-0.5 block w-fit rounded bg-card-border/30 text-foreground-muted/70">
           {flight.searchOrigin}→{flight.searchDestination}
         </span>
       )}
