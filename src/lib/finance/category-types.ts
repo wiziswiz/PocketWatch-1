@@ -40,6 +40,7 @@ export interface CategorySuggestion {
 }
 
 export interface CategoryRule {
+  id: string
   matchType: string
   matchValue: string
   category: string
