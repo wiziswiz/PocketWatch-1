@@ -42,7 +42,7 @@ export default function TravelPage() {
 
   const handleSearch = useCallback((config: SearchConfig) => {
     setLastConfig(config)
-    search(config)
+    search(config, true)
   }, [search])
 
   const handleSearchCabin = useCallback((searchClass: string) => {
