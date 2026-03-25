@@ -146,7 +146,7 @@ export function buildProgramBookingUrl(
     case "ETIHAD":
       return `https://www.etihad.com/en-us/fly-etihad/book-a-flight`
     default:
-      return PROGRAM_BOOKING_URLS[program] || `https://www.google.com/travel/flights?q=flights+from+${origin}+to+${destination}+on+${date}`
+      return PROGRAM_BOOKING_URLS[program] || `https://www.google.com/travel/flights?q=one+way+flight+from+${origin}+to+${destination}+on+${date}`
   }
 }
 
@@ -225,7 +225,12 @@ export function buildCashBookingUrl(airlineCode: string, origin: string, destina
     case "EK": return `https://www.emirates.com/us/english/book/?origin=${origin}&destination=${destination}&departDate=${date}&pax=1&class=economy`
     case "QR": return `https://booking.qatarairways.com/nsp/views/showBooking.action?tripType=O&from=${origin}&to=${destination}&departing=${date}&adult=1`
     case "TK": return `https://www.turkishairlines.com/en-us/flights/?origin=${origin}&destination=${destination}&departureDate=${date}&adult=1`
-    default: return `https://www.google.com/travel/flights?q=flights+from+${origin}+to+${destination}+on+${date}`
+    case "TO": return `https://www.transavia.com/en-EU/book-a-flight/flights/search/?routeSelection=V&flyingFrom[]=${origin}&flyingTo[]=${destination}&outboundDate=${date}&adultCount=1`
+    case "FR": return `https://www.ryanair.com/gb/en/trip/flights/select?adults=1&dateOut=${date}&origin=${origin}&destination=${destination}`
+    case "U2": return `https://www.easyjet.com/en/booking/select-flight?origin=${origin}&destination=${destination}&outbound=${date}&adults=1`
+    case "W6": return `https://wizzair.com/#/booking/select-flight/${origin}/${destination}/${date}/null/1/0/0/null`
+    case "AT": return `https://www.royalairmaroc.com/us-en/book/search?from=${origin}&to=${destination}&date=${date}&adults=1&tripType=OW`
+    default: return `https://www.google.com/travel/flights?q=one+way+flight+from+${origin}+to+${destination}+on+${date}`
   }
 }
 
