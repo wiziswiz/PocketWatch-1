@@ -34,3 +34,11 @@ export function formatNumber(num: number | string, decimals = 2): string {
 export function formatPercentage(value: number, decimals = 1): string {
   return `${value.toFixed(decimals)}%`
 }
+
+export function formatRelativeTime(iso: string): string {
+  const ago = Date.now() - new Date(iso).getTime()
+  if (ago < 60_000) return "just now"
+  if (ago < 3_600_000) return `${Math.floor(ago / 60_000)}m ago`
+  if (ago < 86_400_000) return `${Math.floor(ago / 3_600_000)}h ago`
+  return `${Math.floor(ago / 86_400_000)}d ago`
+}

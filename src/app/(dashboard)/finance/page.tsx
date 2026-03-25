@@ -7,9 +7,9 @@ import Link from "next/link"
 import {
   useFinanceAccounts, useFinanceDeepInsights,
   useAutoCategorize, useNetWorth,
-  useFetchFullHistory,
+  useFetchFullHistory, useSyncAll,
 } from "@/hooks/use-finance"
-import { formatCurrency, cn } from "@/lib/utils"
+import { formatCurrency, formatRelativeTime, cn } from "@/lib/utils"
 import { FinancePageHeader } from "@/components/finance/finance-page-header"
 import { usePrivacyMode } from "@/hooks/use-privacy-mode"
 import { PrivacyToggle } from "@/components/portfolio/privacy-toggle"
@@ -44,7 +44,14 @@ export default function FinanceDashboardPage() {
 
   const autoCategorize = useAutoCategorize()
   const fetchHistory = useFetchFullHistory()
+  const syncAll = useSyncAll()
 
+  // Derive last synced time from most recent institution sync
+  const lastSyncedAt = accounts?.reduce<string | null>((latest, inst) => {
+    if (!inst.lastSyncedAt) return latest
+    if (!latest) return inst.lastSyncedAt
+    return new Date(inst.lastSyncedAt) > new Date(latest) ? inst.lastSyncedAt : latest
+  }, null) ?? null
 
   // Account aggregation
   const allAccounts = accounts?.flatMap((inst) =>
@@ -113,6 +120,24 @@ export default function FinanceDashboardPage() {
         title="Financial Overview"
         actions={
           <>
+            {lastSyncedAt && (
+              <span className="text-[10px] text-foreground-muted tabular-nums hidden sm:inline">
+                Synced {formatRelativeTime(lastSyncedAt)}
+              </span>
+            )}
+            <button
+              onClick={() => syncAll.mutate(undefined, {
+                onSuccess: () => toast.success("All accounts refreshed"),
+                onError: (err) => toast.error(err.message),
+              })}
+              disabled={syncAll.isPending}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-card-border text-foreground-muted hover:text-foreground hover:border-card-border-hover transition-colors disabled:opacity-50"
+            >
+              <span className={cn("material-symbols-rounded", syncAll.isPending && "animate-spin")} style={{ fontSize: 14 }}>
+                sync
+              </span>
+              {syncAll.isPending ? "Syncing..." : "Refresh"}
+            </button>
             {deep && <FlexButton deep={deep} />}
             <PrivacyToggle isHidden={isHidden} onToggle={togglePrivacy} />
           </>
