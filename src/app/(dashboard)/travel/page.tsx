@@ -8,6 +8,7 @@ import { FlightResults } from "@/components/travel/flight-results"
 import { PocketWatchPicks } from "@/components/travel/pocketwatch-picks"
 import { RecommendationsPanel } from "@/components/travel/recommendations-panel"
 import { BalancesPanel } from "@/components/travel/balances-panel"
+import { InsightsBanner } from "@/components/travel/insights-banner"
 import type { SearchConfig } from "@/types/travel"
 
 export default function TravelPage() {
@@ -73,24 +74,7 @@ export default function TravelPage() {
           <div className="space-y-6 min-w-0">
             {/* Insights */}
             {results.insights.length > 0 && (
-              <div className="space-y-2">
-                {results.insights.map((insight, i) => (
-                  <div
-                    key={i}
-                    className="card p-3 flex items-start gap-2 border-l-3"
-                    style={{
-                      borderLeftColor: insight.priority === "high" ? "var(--error)" :
-                                      insight.priority === "medium" ? "var(--warning)" : "var(--primary)",
-                      borderLeftWidth: 3,
-                    }}
-                  >
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-foreground">{insight.title}</p>
-                      <p className="text-[11px] text-foreground-muted mt-0.5">{insight.detail}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <InsightsBanner insights={results.insights} />
             )}
 
             {/* Warnings */}

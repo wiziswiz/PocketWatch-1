@@ -124,7 +124,8 @@ function generateRecommendations(
 
   if (cheapestCash) {
     const bestAwardCpp = bestValueAwards[0]?.realCpp || 0
-    const cashWins = bestAwardCpp < 1.5
+    const cashWins = bestAwardCpp < 1.0
+    const borderline = bestAwardCpp >= 1.0 && bestAwardCpp < 1.5
 
     recommendations.push({
       rank: 3,
@@ -134,12 +135,14 @@ function generateRecommendations(
         cheapestCash.flightNumbers.join(" / "),
         cashWins
           ? `Cash wins — best award is only ${bestAwardCpp}c/pt, save points for a better route`
-          : `Points get ${bestAwardCpp}c/pt value here — use them`,
+          : borderline
+            ? `Awards get ${bestAwardCpp}c/pt — borderline value. Cash at $${cheapestCash.cashPrice?.toLocaleString()} is comparable`
+            : `Points get ${bestAwardCpp}c/pt value here — use them`,
       ],
       totalCost: `$${cheapestCash.cashPrice?.toLocaleString()}`,
       cppValue: null,
       bookingUrl: cheapestCash.bookingUrl,
-      badgeText: cashWins ? "#3 CASH WINS" : "#3 SAVE POINTS",
+      badgeText: cashWins ? "#3 CASH WINS" : borderline ? "#3 CONSIDER CASH" : "#3 USE POINTS",
       badgeColor: "gold",
     })
   }
