@@ -198,6 +198,26 @@ export async function getCCBills(userId: string, targetMonth: string, now: Date)
       })
     : []
 
+  // Auto-detect due day from most recent payment transaction for cards missing paymentDueDay
+  const needDetection = profileAccountIds.filter((id) => !dueDayMap.get(id))
+  if (needDetection.length > 0) {
+    const recentPayments = await db.financeTransaction.findMany({
+      where: {
+        userId,
+        accountId: { in: needDetection },
+        amount: { lt: 0 }, // credits / payments are negative
+      },
+      select: { accountId: true, date: true },
+      orderBy: { date: "desc" },
+      take: needDetection.length * 3,
+    })
+    for (const tx of recentPayments) {
+      if (tx.accountId && !dueDayMap.get(tx.accountId)) {
+        dueDayMap.set(tx.accountId, new Date(tx.date).getDate())
+      }
+    }
+  }
+
   const [targetYear, targetMon] = targetMonth.split("-").map(Number)
   for (const acct of creditAccounts) {
     const balance = Math.abs(acct.currentBalance ?? 0)
