@@ -7,18 +7,23 @@ interface AddManualFormProps {
   formName: string
   formValue: string
   formType: string
+  formApy: string
+  formYieldType: string
   isPending: boolean
   onNameChange: (v: string) => void
   onValueChange: (v: string) => void
   onTypeChange: (v: string) => void
+  onApyChange: (v: string) => void
+  onYieldTypeChange: (v: string) => void
   onSubmit: () => void
   onCancel: () => void
 }
 
 export function InvestmentsAddForm({
-  formName, formValue, formType, isPending,
-  onNameChange, onValueChange, onTypeChange, onSubmit, onCancel,
+  formName, formValue, formType, formApy, formYieldType, isPending,
+  onNameChange, onValueChange, onTypeChange, onApyChange, onYieldTypeChange, onSubmit, onCancel,
 }: AddManualFormProps) {
+  const isYieldType = formType === "yield"
   const selectedMeta = getInvestmentTypeMeta(formType)
   return (
     <div className="bg-card border border-primary/20 rounded-xl p-5 mb-4">
@@ -45,17 +50,39 @@ export function InvestmentsAddForm({
           </button>
         ))}
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className={cn("grid gap-3", isYieldType ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-2")}>
         <div>
           <label className="text-[10px] font-medium uppercase tracking-widest text-foreground-muted mb-1 block">Name</label>
-          <input type="text" value={formName} onChange={(e) => onNameChange(e.target.value)} placeholder="e.g. Robinhood — AAPL"
+          <input type="text" value={formName} onChange={(e) => onNameChange(e.target.value)} placeholder={isYieldType ? "e.g. Galaxy Premium Yield" : "e.g. Robinhood — AAPL"}
             className="w-full px-3 py-2.5 text-sm border border-card-border rounded-lg bg-background text-foreground placeholder:text-foreground-muted/50 focus:outline-none focus:border-primary/50 transition-colors" />
         </div>
         <div>
-          <label className="text-[10px] font-medium uppercase tracking-widest text-foreground-muted mb-1 block">Current Value ($)</label>
+          <label className="text-[10px] font-medium uppercase tracking-widest text-foreground-muted mb-1 block">{isYieldType ? "Principal ($)" : "Current Value ($)"}</label>
           <input type="number" value={formValue} onChange={(e) => onValueChange(e.target.value)} placeholder="0.00" min="0" step="0.01"
             className="w-full px-3 py-2.5 text-sm font-data tabular-nums border border-card-border rounded-lg bg-background text-foreground placeholder:text-foreground-muted/50 focus:outline-none focus:border-primary/50 transition-colors" />
         </div>
+        {isYieldType && (
+          <>
+            <div>
+              <label className="text-[10px] font-medium uppercase tracking-widest text-foreground-muted mb-1 block">APY (%)</label>
+              <input type="number" value={formApy} onChange={(e) => onApyChange(e.target.value)} placeholder="8.00" min="0" max="100" step="0.01"
+                className="w-full px-3 py-2.5 text-sm font-data tabular-nums border border-card-border rounded-lg bg-background text-foreground placeholder:text-foreground-muted/50 focus:outline-none focus:border-primary/50 transition-colors" />
+            </div>
+            <div>
+              <label className="text-[10px] font-medium uppercase tracking-widest text-foreground-muted mb-1 block">Rate Type</label>
+              <div className="flex gap-1.5">
+                {(["fixed", "variable"] as const).map((t) => (
+                  <button key={t} onClick={() => onYieldTypeChange(t)}
+                    className={cn("flex-1 px-3 py-2.5 text-xs font-medium rounded-lg border transition-colors",
+                      formYieldType === t ? "border-primary/30 bg-primary/10 text-primary" : "border-card-border text-foreground-muted hover:text-foreground"
+                    )}>
+                    {t === "fixed" ? "Fixed" : "Variable"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </div>
       <div className="flex justify-end mt-4">
         <button onClick={onSubmit} disabled={isPending || !formName.trim() || !formValue}

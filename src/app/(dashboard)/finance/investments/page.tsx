@@ -44,6 +44,8 @@ export default function InvestmentsPage() {
   const [formName, setFormName] = useState("")
   const [formValue, setFormValue] = useState("")
   const [formType, setFormType] = useState("stocks")
+  const [formApy, setFormApy] = useState("")
+  const [formYieldType, setFormYieldType] = useState("fixed")
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState("")
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -122,8 +124,12 @@ export default function InvestmentsPage() {
   const handleCreate = () => {
     const value = parseFloat(formValue)
     if (!formName.trim() || isNaN(value) || value < 0) return
-    createInvestment.mutate({ name: formName.trim(), value, type: formType }, {
-      onSuccess: () => { setFormName(""); setFormValue(""); setFormType("stocks"); setShowAddForm(false) },
+    const apyNum = formApy ? parseFloat(formApy) / 100 : undefined // Convert % to decimal
+    createInvestment.mutate({
+      name: formName.trim(), value, type: formType,
+      ...(apyNum && apyNum > 0 ? { apy: apyNum, yieldType: formYieldType } : {}),
+    }, {
+      onSuccess: () => { setFormName(""); setFormValue(""); setFormType("stocks"); setFormApy(""); setFormYieldType("fixed"); setShowAddForm(false) },
     })
   }
 
@@ -184,8 +190,8 @@ export default function InvestmentsPage() {
           </div>
         </div>
         {showAddForm && (
-          <InvestmentsAddForm formName={formName} formValue={formValue} formType={formType} isPending={createInvestment.isPending}
-            onNameChange={setFormName} onValueChange={setFormValue} onTypeChange={setFormType} onSubmit={handleCreate} onCancel={() => setShowAddForm(false)} />
+          <InvestmentsAddForm formName={formName} formValue={formValue} formType={formType} formApy={formApy} formYieldType={formYieldType} isPending={createInvestment.isPending}
+            onNameChange={setFormName} onValueChange={setFormValue} onTypeChange={setFormType} onApyChange={setFormApy} onYieldTypeChange={setFormYieldType} onSubmit={handleCreate} onCancel={() => setShowAddForm(false)} />
         )}
       </div>
     )
@@ -373,8 +379,8 @@ export default function InvestmentsPage() {
             )}
           </div>
           {showAddForm && (
-            <InvestmentsAddForm formName={formName} formValue={formValue} formType={formType} isPending={createInvestment.isPending}
-              onNameChange={setFormName} onValueChange={setFormValue} onTypeChange={setFormType} onSubmit={handleCreate} onCancel={() => setShowAddForm(false)} />
+            <InvestmentsAddForm formName={formName} formValue={formValue} formType={formType} formApy={formApy} formYieldType={formYieldType} isPending={createInvestment.isPending}
+              onNameChange={setFormName} onValueChange={setFormValue} onTypeChange={setFormType} onApyChange={setFormApy} onYieldTypeChange={setFormYieldType} onSubmit={handleCreate} onCancel={() => setShowAddForm(false)} />
           )}
           <InvestmentsManualCards
             manualAccounts={manualAccounts} editingId={editingId} editValue={editValue} deletingId={deletingId} showAddForm={showAddForm}

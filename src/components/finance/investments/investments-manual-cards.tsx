@@ -6,6 +6,7 @@ import { getInvestmentTypeMeta } from "./investments-constants"
 interface ManualCardsProps {
   manualAccounts: Array<{
     id: string; name: string; subtype: string | null; currentBalance: number | null
+    apy?: number | null; yieldType?: string | null
   }>
   editingId: string | null
   editValue: string
@@ -79,7 +80,15 @@ export function InvestmentsManualCards({
               ) : (
                 <div className="flex items-baseline justify-between">
                   <span className="font-data text-lg font-bold text-foreground tabular-nums">{formatCurrency(acct.currentBalance ?? 0)}</span>
-                  <span className="text-[10px] text-foreground-muted">Manual</span>
+                  <div className="flex items-center gap-1.5">
+                    {acct.apy ? (
+                      <span className="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-success/10 text-success tabular-nums">
+                        {(acct.apy * 100).toFixed(2)}% APY
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-foreground-muted">Manual</span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

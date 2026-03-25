@@ -26,6 +26,7 @@ export async function GET() {
           select: {
             id: true, name: true, type: true, subtype: true,
             currentBalance: true, currency: true, isHidden: true, updatedAt: true,
+            apy: true, yieldType: true,
           },
         },
       },
@@ -59,6 +60,8 @@ export async function GET() {
           currency: a.currency,
           isHidden: a.isHidden,
           updatedAt: a.updatedAt,
+          apy: a.apy,
+          yieldType: a.yieldType,
         })),
       }))
 
@@ -80,7 +83,9 @@ export async function GET() {
 const createSchema = z.object({
   name: z.string().min(1).max(200),
   value: z.number().min(0),
-  type: z.enum(["stocks", "bonds", "real_estate", "crypto", "other"]).default("other"),
+  type: z.enum(["stocks", "bonds", "real_estate", "crypto", "yield", "other"]).default("other"),
+  apy: z.number().min(0).max(1).optional(),       // e.g., 0.08 for 8%
+  yieldType: z.enum(["fixed", "variable"]).optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -118,6 +123,8 @@ export async function POST(req: NextRequest) {
         subtype: parsed.type,
         currentBalance: parsed.value,
         currency: "USD",
+        apy: parsed.apy ?? null,
+        yieldType: parsed.yieldType ?? null,
       },
     })
 
@@ -137,6 +144,8 @@ const updateSchema = z.object({
   accountId: z.string().min(1),
   name: z.string().min(1).max(200).optional(),
   value: z.number().min(0).optional(),
+  apy: z.number().min(0).max(1).nullable().optional(),
+  yieldType: z.enum(["fixed", "variable"]).nullable().optional(),
 })
 
 export async function PATCH(req: NextRequest) {
@@ -168,6 +177,12 @@ export async function PATCH(req: NextRequest) {
     }
     if (parsed.value !== undefined) {
       data.currentBalance = parsed.value
+    }
+    if (parsed.apy !== undefined) {
+      data.apy = parsed.apy
+    }
+    if (parsed.yieldType !== undefined) {
+      data.yieldType = parsed.yieldType
     }
 
     const updated = await db.financeAccount.update({

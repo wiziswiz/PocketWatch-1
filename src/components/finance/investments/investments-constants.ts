@@ -3,6 +3,7 @@ export const INVESTMENT_TYPE_OPTIONS = [
   { value: "bonds", label: "Bonds", icon: "savings", color: "#10b981" },
   { value: "real_estate", label: "Real Estate", icon: "home", color: "#f59e0b" },
   { value: "crypto", label: "Crypto", icon: "currency_bitcoin", color: "#f97316" },
+  { value: "yield", label: "Yield", icon: "percent", color: "#14b8a6" },
   { value: "other", label: "Other", icon: "account_balance_wallet", color: "#6b7280" },
 ] as const
 

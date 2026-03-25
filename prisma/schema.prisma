@@ -693,6 +693,8 @@ model FinanceAccount {
   currentBalance        Float?
   availableBalance      Float?
   creditLimit           Float?
+  apy                   Float?
+  yieldType             String?
   currency              String                        @default("USD")
   isHidden              Boolean                       @default(false)
   createdAt             DateTime                      @default(now())

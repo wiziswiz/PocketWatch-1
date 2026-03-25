@@ -19,6 +19,7 @@ import {
 } from "@/lib/finance/sync/plaid-sync-jobs"
 import { detectAndNotify, notifyPriceChanges } from "@/lib/finance/alert-orchestrator"
 import { detectAndSaveSubscriptions } from "@/lib/finance/sync/detect-subscriptions"
+import { accrueYield } from "@/lib/finance/yield-accrual"
 
 export const maxDuration = 300
 
@@ -108,6 +109,7 @@ export async function POST(request: NextRequest) {
       }
       const alertResult = await detectAndNotify(userId)
       alertResults.push({ userId, alertsSent: alertResult.alertsSent })
+      await accrueYield(userId).catch(() => {})
     } catch (err) {
       console.error("[finance-sync-worker] Alert check failed:", err instanceof Error ? err.message : err)
     }
