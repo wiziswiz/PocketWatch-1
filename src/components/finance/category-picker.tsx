@@ -69,7 +69,7 @@ export function CategoryPicker({ selected, onSelect }: CategoryPickerProps) {
       {/* Search input */}
       <div className="relative">
         <span
-          className="material-symbols-rounded absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground-muted"
+          className="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-foreground-muted pointer-events-none"
           style={{ fontSize: 16 }}
         >
           search
@@ -79,7 +79,7 @@ export function CategoryPicker({ selected, onSelect }: CategoryPickerProps) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search categories..."
-          className="w-full pl-9 pr-3 py-2 text-xs rounded-lg bg-background-secondary border-0 text-foreground placeholder:text-foreground-muted/60 focus:outline-none focus:ring-1 focus:ring-foreground/20"
+          className="w-full pl-10 pr-3 py-2.5 text-sm rounded-lg bg-background-secondary border border-card-border text-foreground placeholder:text-foreground-muted/50 focus:outline-none focus:border-primary transition-colors"
         />
       </div>
 
