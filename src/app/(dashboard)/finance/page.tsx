@@ -6,7 +6,7 @@ import { toast } from "sonner"
 import Link from "next/link"
 import {
   useFinanceAccounts, useFinanceDeepInsights,
-  useAutoCategorize, useNetWorth,
+  useNetWorth,
   useFetchFullHistory, useSyncAll,
 } from "@/hooks/use-finance"
 import { formatCurrency, formatRelativeTime, cn } from "@/lib/utils"
@@ -20,7 +20,7 @@ import { FinanceStatCard } from "@/components/finance/stat-card"
 import { FinanceEmpty } from "@/components/finance/finance-empty"
 import { FinanceCardSkeleton } from "@/components/finance/finance-loading"
 import { SpendingMonthCard } from "@/components/finance/spending-month-card"
-import { MerchantIcon } from "@/components/finance/merchant-icon"
+// MerchantIcon removed — uncategorized preview banner replaced with status link
 import { MonthlyBillsCard } from "@/components/finance/dashboard/monthly-bills-card"
 
 const NetWorthChart = dynamic(
@@ -42,7 +42,7 @@ export default function FinanceDashboardPage() {
   const { data: deep } = useFinanceDeepInsights()
   const { data: netWorthData, isLoading: nwLoading } = useNetWorth(RANGE_MAP[nwRange] ?? "1y", includeInvestments)
 
-  const autoCategorize = useAutoCategorize()
+  // autoCategorize removed — replaced by review flow
   const fetchHistory = useFetchFullHistory()
   const syncAll = useSyncAll()
 
@@ -284,79 +284,27 @@ export default function FinanceDashboardPage() {
         )}
       </div>
 
-      {/* Uncategorized Banner or Compact All-Clear */}
+      {/* Categorization Status */}
       <div className="animate-fade-up delay-4 mb-6">
-        {deep && deep.uncategorizedCount > 0 ? (
-          <div className="bg-card rounded-xl p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, var(--warning), color-mix(in srgb, var(--warning) 80%, #000))" }}>
-                  <span className="material-symbols-rounded text-white drop-shadow-sm" style={{ fontSize: 20 }}>label_off</span>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-foreground">Uncategorized</p>
-                    <span className="bg-warning/10 text-warning text-[10px] font-semibold px-1.5 py-0.5 rounded-full tabular-nums">
-                      {deep.uncategorizedCount}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <Link
-                href="/finance/categorize"
-                className="text-xs text-primary hover:text-primary-hover font-medium transition-colors"
-              >
-                Review all
-              </Link>
+        {deep && (deep.uncategorizedCount > 0) ? (
+          <Link
+            href="/finance/categorize"
+            className="flex items-center gap-3 bg-card border border-amber-500/20 rounded-xl px-4 py-3 hover:border-amber-500/40 transition-colors group"
+          >
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+              <span className="material-symbols-rounded text-amber-500" style={{ fontSize: 16 }}>rate_review</span>
             </div>
-            {deep.uncategorizedPreview && deep.uncategorizedPreview.length > 0 && (
-              <div className="space-y-0 mb-3">
-                {deep.uncategorizedPreview.map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between py-1.5 border-b border-card-border/50 last:border-0">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <MerchantIcon logoUrl={tx.logoUrl} size="sm" />
-                      <span className="text-xs text-foreground truncate">{tx.name}</span>
-                    </div>
-                    <span className="text-xs font-medium tabular-nums text-foreground-muted flex-shrink-0 ml-2">
-                      <BlurredValue isHidden={isHidden}>{formatCurrency(tx.amount)}</BlurredValue>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <button
-              onClick={() => autoCategorize.mutate(undefined, {
-                onSuccess: (result) => {
-                  if (result.categorized > 0) {
-                    const parts = []
-                    if (result.aiCategorized > 0) {
-                      parts.push(`${result.aiCategorized} by AI`)
-                    }
-                    const ruleCount = result.categorized - (result.aiCategorized ?? 0)
-                    if (ruleCount > 0) {
-                      parts.push(`${ruleCount} by rules`)
-                    }
-                    const detail = parts.length > 0 ? ` (${parts.join(", ")})` : ""
-                    toast.success(`Categorized ${result.categorized} transaction${result.categorized > 1 ? "s" : ""}${detail}${result.remaining > 0 ? ` — ${result.remaining} remaining` : ""}`)
-                  } else if (result.aiError) {
-                    toast.error(`AI categorization failed: ${result.aiError}`)
-                  } else {
-                    toast.info("No transactions could be auto-categorized. Review them manually.")
-                  }
-                },
-                onError: (err) => toast.error(err.message),
-              })}
-              disabled={autoCategorize.isPending}
-              className="w-full px-3 py-1.5 text-xs font-medium text-white bg-primary hover:bg-primary-hover rounded-lg transition-colors disabled:opacity-50"
-            >
-              {autoCategorize.isPending ? "Categorizing with AI..." : "Auto-categorize"}
-            </button>
-          </div>
+            <div className="flex-1">
+              <p className="text-xs font-medium text-foreground">
+                {deep.uncategorizedCount} transaction{deep.uncategorizedCount !== 1 ? "s" : ""} need review
+              </p>
+            </div>
+            <span className="material-symbols-rounded text-foreground-muted group-hover:text-foreground text-sm transition-colors">arrow_forward</span>
+          </Link>
         ) : (
           <div className="bg-success/5 border border-success/20 rounded-xl px-4 py-3 flex items-center gap-3">
             <span className="material-symbols-rounded text-success" style={{ fontSize: 18 }}>check_circle</span>
             <p className="text-xs font-medium text-foreground">All Categorized</p>
-            <p className="text-xs text-foreground-muted">— Your transactions are fully categorized</p>
           </div>
         )}
       </div>

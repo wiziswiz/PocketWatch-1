@@ -46,6 +46,10 @@ export async function POST(req: NextRequest): Promise<Response> {
   const useCLI = !providerKey
 
   const encoder = new TextEncoder()
+  // Cancel any existing rebuild for this user before starting a new one
+  const existingSignal = rebuildSignals.get(user.id)
+  if (existingSignal) existingSignal.cancelled = true
+
   const cancelSignal = { cancelled: false }
   rebuildSignals.set(user.id, cancelSignal)
 

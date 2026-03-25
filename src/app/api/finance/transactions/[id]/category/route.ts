@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth"
 import { apiError } from "@/lib/api-error"
 import { db } from "@/lib/db"
-import { cleanMerchantName, computeNewConfidence, CONFIDENCE } from "@/lib/finance/categorize"
+import { cleanMerchantName, computeNewConfidence, CONFIDENCE, CATEGORIES } from "@/lib/finance/categorize"
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod/v4"
 
@@ -28,102 +28,112 @@ export async function PATCH(
 
   const { category, subcategory, nickname, createRule } = parsed.data
 
+  // Validate category against allowed set
+  const customCategories = await db.financeCustomCategory.findMany({ where: { userId: user.id }, select: { label: true } })
+  const validCategories = new Set([...Object.keys(CATEGORIES), ...customCategories.map((c) => c.label)])
+  if (!validCategories.has(category)) {
+    return apiError("F4034", `Invalid category: ${category}`, 400)
+  }
+
   try {
     const tx = await db.financeTransaction.findFirst({
       where: { id, userId: user.id },
     })
     if (!tx) return apiError("F4032", "Transaction not found", 404)
 
-    // If overriding an auto-applied category, penalize the old rule
-    const isOverride = tx.isAutoApplied && tx.category && tx.category !== category
-    if (isOverride) {
-      const cleaned = cleanMerchantName(tx.merchantName ?? tx.name)
-      const oldRule = await db.financeCategoryRule.findFirst({
-        where: { userId: user.id, matchType: "contains", matchValue: cleaned, category: tx.category! },
-      })
-      if (oldRule) {
-        await db.financeCategoryRule.update({
-          where: { id: oldRule.id },
-          data: {
-            confidence: computeNewConfidence(oldRule.confidence, "overridden"),
-            timesOverridden: { increment: 1 },
-            lastUsedAt: new Date(),
-          },
+    // Wrap all writes in a single atomic transaction
+    const updated = await db.$transaction(async (prisma) => {
+      // If overriding an auto-applied category, penalize the old rule
+      if (tx.isAutoApplied && tx.category && tx.category !== category) {
+        const cleaned = cleanMerchantName(tx.merchantName ?? tx.name)
+        const oldRule = await prisma.financeCategoryRule.findFirst({
+          where: { userId: user.id, matchType: "contains", matchValue: cleaned, category: tx.category },
         })
-      }
-    }
-
-    // Update transaction
-    const updated = await db.financeTransaction.update({
-      where: { id },
-      data: {
-        category,
-        subcategory: subcategory ?? null,
-        isAutoApplied: false,
-        needsReview: false,
-        ...(nickname !== undefined ? { nickname: nickname || null } : {}),
-      },
-    })
-
-    // Create/update rule for this merchant
-    if (createRule && tx.merchantName) {
-      const cleaned = cleanMerchantName(tx.merchantName)
-      if (cleaned.length > 1) {
-        const existing = await db.financeCategoryRule.findFirst({
-          where: { userId: user.id, matchType: "contains", matchValue: cleaned },
-        })
-
-        if (existing) {
-          // If same category, confirm; if different, update with fresh confidence
-          const newConf = existing.category === category
-            ? computeNewConfidence(existing.confidence, "confirmed")
-            : CONFIDENCE.INITIAL_USER
-          await db.financeCategoryRule.update({
-            where: { id: existing.id },
+        if (oldRule) {
+          await prisma.financeCategoryRule.update({
+            where: { id: oldRule.id },
             data: {
-              category,
-              subcategory: subcategory ?? null,
-              confidence: newConf,
-              timesConfirmed: existing.category === category ? { increment: 1 } : existing.timesConfirmed,
+              confidence: computeNewConfidence(oldRule.confidence, "overridden"),
+              timesOverridden: { increment: 1 },
               lastUsedAt: new Date(),
-              source: "user",
-              ...(nickname !== undefined ? { nickname: nickname || null } : {}),
             },
           })
-        } else {
-          await db.financeCategoryRule.create({
-            data: {
+        }
+      }
+
+      // Update transaction
+      const result = await prisma.financeTransaction.update({
+        where: { id },
+        data: {
+          category,
+          subcategory: subcategory ?? null,
+          isAutoApplied: false,
+          needsReview: false,
+          ...(nickname !== undefined ? { nickname: nickname || null } : {}),
+        },
+      })
+
+      // Create/update rule for this merchant
+      if (createRule && tx.merchantName) {
+        const cleaned = cleanMerchantName(tx.merchantName)
+        if (cleaned.length > 1) {
+          const existing = await prisma.financeCategoryRule.findFirst({
+            where: { userId: user.id, matchType: "contains", matchValue: cleaned },
+          })
+
+          if (existing) {
+            const newConf = existing.category === category
+              ? computeNewConfidence(existing.confidence, "confirmed")
+              : CONFIDENCE.INITIAL_USER
+            await prisma.financeCategoryRule.update({
+              where: { id: existing.id },
+              data: {
+                category,
+                subcategory: subcategory ?? null,
+                confidence: newConf,
+                timesConfirmed: existing.category === category ? { increment: 1 } : existing.timesConfirmed,
+                lastUsedAt: new Date(),
+                source: "user",
+                ...(nickname !== undefined ? { nickname: nickname || null } : {}),
+              },
+            })
+          } else {
+            await prisma.financeCategoryRule.create({
+              data: {
+                userId: user.id,
+                matchType: "contains",
+                matchValue: cleaned,
+                category,
+                subcategory: subcategory ?? null,
+                priority: 10,
+                confidence: CONFIDENCE.INITIAL_USER,
+                source: "user",
+                ...(nickname !== undefined ? { nickname: nickname || null } : {}),
+              },
+            })
+          }
+
+          // Batch-apply to other uncategorized transactions
+          await prisma.financeTransaction.updateMany({
+            where: {
               userId: user.id,
-              matchType: "contains",
-              matchValue: cleaned,
+              id: { not: id },
+              OR: [{ category: null }, { category: "" }, { category: "Uncategorized" }],
+              name: { contains: cleaned, mode: "insensitive" },
+            },
+            data: {
               category,
               subcategory: subcategory ?? null,
-              priority: 10,
-              confidence: CONFIDENCE.INITIAL_USER,
-              source: "user",
+              isAutoApplied: true,
+              needsReview: true,
               ...(nickname !== undefined ? { nickname: nickname || null } : {}),
             },
           })
         }
-
-        // Batch-apply to other uncategorized transactions
-        await db.financeTransaction.updateMany({
-          where: {
-            userId: user.id,
-            id: { not: id },
-            OR: [{ category: null }, { category: "" }, { category: "Uncategorized" }],
-            name: { contains: cleaned, mode: "insensitive" },
-          },
-          data: {
-            category,
-            subcategory: subcategory ?? null,
-            isAutoApplied: true,
-            needsReview: true,
-            ...(nickname !== undefined ? { nickname: nickname || null } : {}),
-          },
-        })
       }
-    }
+
+      return result
+    })
 
     return NextResponse.json(updated)
   } catch (err) {

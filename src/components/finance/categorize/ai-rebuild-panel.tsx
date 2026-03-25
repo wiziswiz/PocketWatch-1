@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { getCategoryMeta } from "@/lib/finance/categories"
 import { useAIRebuild, type ProcessedMerchant } from "@/hooks/finance/use-ai-rebuild"
@@ -10,6 +11,7 @@ interface AIRebuildPanelProps {
 
 export function AIRebuildPanel({ uncategorizedCount }: AIRebuildPanelProps) {
   const { state, start, cancel, reset, isRunning, isCounting, isComplete } = useAIRebuild()
+  const [previewedMode, setPreviewedMode] = useState<"uncategorized" | "full">("uncategorized")
 
   // Idle — mode selection
   if (state.status === "idle" && !state.preview) {
@@ -20,14 +22,14 @@ export function AIRebuildPanel({ uncategorizedCount }: AIRebuildPanelProps) {
           description={`Categorize ${uncategorizedCount} uncategorized transactions using AI.`}
           icon="auto_awesome"
           disabled={uncategorizedCount === 0}
-          onClick={() => start("uncategorized", true)}
+          onClick={() => { setPreviewedMode("uncategorized"); start("uncategorized", true) }}
         />
         <ModeCard
           title="Full Rebuild"
           description="Re-evaluate ALL transactions. AI will review and fix miscategorizations."
           icon="restart_alt"
           variant="warning"
-          onClick={() => start("full", true)}
+          onClick={() => { setPreviewedMode("full"); start("full", true) }}
         />
       </div>
     )
@@ -64,7 +66,7 @@ export function AIRebuildPanel({ uncategorizedCount }: AIRebuildPanelProps) {
             Cancel
           </button>
           <button
-            onClick={() => start(uncategorizedCount > 0 ? "uncategorized" : "full")}
+            onClick={() => start(previewedMode)}
             className="px-6 py-2.5 bg-foreground text-background rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity"
           >
             Start Rebuild

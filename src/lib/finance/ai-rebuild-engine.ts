@@ -129,6 +129,8 @@ export async function runRebuildBatches(
       rulesCreated += batchResults.rulesCreated
       rulesUpdated += batchResults.rulesUpdated
       customCategoriesCreated += batchResults.newCustomCategories.length
+      // Decrement budget AFTER transaction committed successfully
+      customBudget.remaining -= batchResults.newCustomCategories.length
       batchesCompleted++
 
       // Add new custom categories to valid set
@@ -191,7 +193,8 @@ async function persistBatchResults(
     for (const result of results) {
       let { category } = result
 
-      // Handle new custom categories
+      // Handle new custom categories — track outside transaction to avoid
+      // stale budget counter if the transaction rolls back
       if (result.isNewCategory && !validCategories.has(category)) {
         if (customBudget.remaining > 0) {
           await prisma.financeCustomCategory.upsert({
@@ -199,7 +202,6 @@ async function persistBatchResults(
             create: { userId, label: category, icon: "label", hex: "#78716c" },
             update: {},
           })
-          customBudget.remaining--
           newCustomCategories.push(category)
         } else {
           category = "Uncategorized"

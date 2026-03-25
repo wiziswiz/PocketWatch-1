@@ -210,6 +210,8 @@ export function suggestCategories(
       amount: tx.amount ?? 0,
       accountType: tx.accountType,
       accountSubtype: tx.accountSubtype ?? null,
+      plaidCategory: tx.plaidCategory,
+      plaidCategoryPrimary: (tx as { plaidCategoryPrimary?: string | null }).plaidCategoryPrimary,
     }
     const hardResult = applyHardRules(hardCtx)
     if (hardResult) {
