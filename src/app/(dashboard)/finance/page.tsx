@@ -70,7 +70,7 @@ export default function FinanceDashboardPage() {
   const firstNW = netWorthData?.[0]
   const nwDelta = firstNW ? netWorth - firstNW.fiatNetWorth : 0
   const nwPercent = firstNW && firstNW.fiatNetWorth !== 0
-    ? ((nwDelta) / Math.abs(firstNW.fiatNetWorth)) * 100
+    ? (nwDelta / firstNW.fiatNetWorth) * 100
     : 0
 
   const isLoading = accountsLoading

@@ -108,8 +108,8 @@ export async function GET() {
     const result = {
       totalSpending: Math.round(totalSpending * 100) / 100,
       totalIncome: Math.round(totalIncome * 100) / 100,
-      lastMonthSpending: lastMonthSpending.reduce((s, c) => s + (c._sum.amount ?? 0), 0),
-      lastMonthIncome: Math.abs(lastMonthIncome._sum.amount ?? 0),
+      lastMonthSpending: Math.round(lastMonthSpending.reduce((s, c) => s + (c._sum.amount ?? 0), 0) * 100) / 100,
+      lastMonthIncome: Math.round(Math.abs(lastMonthIncome._sum.amount ?? 0) * 100) / 100,
       savingsRate: Math.round(savingsRate * 10) / 10,
       categoryComparison,
       topMerchants: topMerchants.map((m) => ({

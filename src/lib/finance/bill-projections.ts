@@ -108,6 +108,7 @@ export function projectPlaidBill(
     : (ps.description || "Unknown Charge")
 
   const amount = ps.lastAmount ?? ps.averageAmount ?? 0
+  if (amount <= 0) return null // Skip bills with no known amount
   const classifyName = merchantName ?? ps.description
   const { billType } = classifyBillType({
     merchantName: classifyName, frequency: freq, category: ps.category ?? null, amount,
@@ -222,7 +223,10 @@ export async function getCCBills(userId: string, targetMonth: string, now: Date)
   for (const acct of creditAccounts) {
     const balance = Math.abs(acct.currentBalance ?? 0)
     if (balance <= 0) continue
-    const dueDay = dueDayMap.get(acct.id) ?? 25
+    const rawDueDay = dueDayMap.get(acct.id) ?? 25
+    // Clamp to last day of month (avoids Feb 31 → Mar 3 overshoot)
+    const lastDayOfMonth = new Date(targetYear, targetMon, 0).getDate()
+    const dueDay = Math.min(rawDueDay, lastDayOfMonth)
     const dueDate = new Date(targetYear, targetMon - 1, dueDay)
     if (!isInMonth(dueDate, targetMonth)) continue
 

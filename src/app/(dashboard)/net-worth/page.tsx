@@ -25,7 +25,7 @@ export default function NetWorthPage() {
   // Period change from history
   const firstTotal = history.length > 0 ? history[0].total : 0
   const delta = totalNetWorth - firstTotal
-  const deltaPct = firstTotal !== 0 ? (delta / Math.abs(firstTotal)) * 100 : 0
+  const deltaPct = firstTotal !== 0 ? (delta / firstTotal) * 100 : 0
 
   if (isError) {
     return (

@@ -65,7 +65,8 @@ export default function FinanceAccountsPage() {
       const key = normalizeType(acct.type)
       if (!counts[key]) counts[key] = { count: 0, total: 0 }
       counts[key].count++
-      counts[key].total += acct.currentBalance ?? 0
+      const isDebt = ["credit", "business_credit", "loan", "mortgage"].includes(acct.type)
+      counts[key].total += isDebt ? Math.abs(acct.currentBalance ?? 0) : (acct.currentBalance ?? 0)
     }
     return counts
   }, [canonical])
@@ -85,12 +86,12 @@ export default function FinanceAccountsPage() {
       .filter((inst) => inst.accounts.length > 0)
   }, [institutions, activeTab])
 
-  const totalAssets = canonical
+  const totalAssets = Math.round(canonical
     .filter((a) => ["checking", "savings", "investment", "brokerage"].includes(a.type))
-    .reduce((sum, a) => sum + (a.currentBalance ?? 0), 0)
-  const totalDebt = canonical
+    .reduce((sum, a) => sum + (a.currentBalance ?? 0), 0) * 100) / 100
+  const totalDebt = Math.round(canonical
     .filter((a) => ["credit", "business_credit", "loan", "mortgage"].includes(a.type))
-    .reduce((sum, a) => sum + Math.abs(a.currentBalance ?? 0), 0)
+    .reduce((sum, a) => sum + Math.abs(a.currentBalance ?? 0), 0) * 100) / 100
   const netBalance = totalAssets - totalDebt
   const isConnecting = exchangeToken.isPending || connectSF.isPending
 

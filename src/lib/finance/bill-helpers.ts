@@ -32,6 +32,11 @@ export function advanceDate(date: Date, frequency: string): void {
   switch (frequency) {
     case "weekly": date.setDate(date.getDate() + 7); break
     case "biweekly": date.setDate(date.getDate() + 14); break
+    case "semi_monthly":
+      // Twice per month: 1st↔15th toggle
+      if (date.getDate() <= 15) { date.setDate(date.getDate() + 15) }
+      else { date.setMonth(date.getMonth() + 1); date.setDate(1) }
+      break
     case "monthly": date.setMonth(date.getMonth() + 1); break
     case "quarterly": date.setMonth(date.getMonth() + 3); break
     case "semi_annual": date.setMonth(date.getMonth() + 6); break
@@ -53,7 +58,7 @@ export function projectNextDate(lastDate: Date | string | null, frequency: strin
 export const PLAID_FREQ: Record<string, string> = {
   WEEKLY: "weekly",
   BIWEEKLY: "biweekly",
-  SEMI_MONTHLY: "biweekly",
+  SEMI_MONTHLY: "semi_monthly",
   MONTHLY: "monthly",
   ANNUALLY: "yearly",
 }
