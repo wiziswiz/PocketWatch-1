@@ -61,21 +61,70 @@ const LEGEND_STAGGER_MS = 40
 
 // ─── Component ───
 
+const MAX_LEGEND_ITEMS = 7
+const OTHER_THRESHOLD = 0.02 // categories under 2% get grouped
+
+// Purpose-built spending palette — high contrast, no muddy neighbors
+const SPENDING_PALETTE = [
+  "#3B82F6", // blue
+  "#F59E0B", // amber
+  "#10B981", // emerald
+  "#8B5CF6", // violet
+  "#EF4444", // red
+  "#06B6D4", // cyan
+  "#EC4899", // pink
+  "#84CC16", // lime
+  "#F97316", // orange
+  "#6366F1", // indigo
+  "#14B8A6", // teal
+  "#A855F7", // purple
+]
+
 export function SpendingDonutChart({ data, height = 250 }: SpendingDonutChartProps) {
-  const { palette } = useChartTheme()
+  useChartTheme() // keep subscription for theme changes
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const [tooltip, setTooltip] = useState<{ x: number; y: number; slice: ArcSlice } | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
 
-  const total = useMemo(() => data.reduce((sum, d) => sum + d.amount, 0), [data])
+  // Step 1: Merge duplicate category names (e.g. two "Uncategorized" entries)
+  const mergedData = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const d of data) {
+      map.set(d.category, (map.get(d.category) ?? 0) + d.amount)
+    }
+    return Array.from(map, ([category, amount]) => ({ category, amount }))
+  }, [data])
+
+  const total = useMemo(() => mergedData.reduce((sum, d) => sum + d.amount, 0), [mergedData])
+
+  // Step 2: Consolidate small categories into "Other" for a cleaner chart
+  const consolidatedData = useMemo(() => {
+    if (total <= 0) return mergedData
+    const sorted = [...mergedData].sort((a, b) => b.amount - a.amount)
+    const top: typeof mergedData = []
+    let otherTotal = 0
+
+    for (const d of sorted) {
+      if (top.length < MAX_LEGEND_ITEMS - 1 && d.amount / total >= OTHER_THRESHOLD) {
+        top.push(d)
+      } else {
+        otherTotal += d.amount
+      }
+    }
+
+    if (otherTotal > 0) {
+      top.push({ category: "Other", amount: otherTotal })
+    }
+    return top
+  }, [mergedData, total])
 
   const slices: ArcSlice[] = useMemo(() => {
     if (total <= 0) return []
-    const totalGap = GAP_DEG * data.length
+    const totalGap = GAP_DEG * consolidatedData.length
     const available = 360 - totalGap
 
     // Calculate raw sweeps and enforce minimum arc size
-    const rawSweeps = data.map((d) => (d.amount / total) * available)
+    const rawSweeps = consolidatedData.map((d) => (d.amount / total) * available)
     const smallTotal = rawSweeps.reduce((sum, s) => (s < MIN_ARC_DEG ? MIN_ARC_DEG - s : 0) + sum, 0)
     const largeTotal = rawSweeps.reduce((sum, s) => (s >= MIN_ARC_DEG ? s : 0) + sum, 0)
     const shrinkRatio = largeTotal > 0 ? (largeTotal - smallTotal) / largeTotal : 1
@@ -85,7 +134,7 @@ export function SpendingDonutChart({ data, height = 250 }: SpendingDonutChartPro
     )
 
     let cursor = 0
-    return data.map((d, i) => {
+    return consolidatedData.map((d, i) => {
       const pct = d.amount / total
       const startAngle = cursor + GAP_DEG / 2
       const endAngle = startAngle + sweeps[i]
@@ -96,11 +145,11 @@ export function SpendingDonutChart({ data, height = 250 }: SpendingDonutChartPro
         pct,
         startAngle,
         endAngle,
-        color: palette[i % palette.length],
+        color: SPENDING_PALETTE[i % SPENDING_PALETTE.length],
         index: i,
       }
     })
-  }, [data, total, palette])
+  }, [consolidatedData, total, palette])
 
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGPathElement>, slice: ArcSlice) => {
     if (!svgRef.current) return
@@ -242,20 +291,18 @@ export function SpendingDonutChart({ data, height = 250 }: SpendingDonutChartPro
         )}
       </div>
 
-      {/* Legend grid */}
-      <div className={cn(
-        "grid gap-x-4 gap-y-2.5 px-4 pb-4",
-        data.length > 6 ? "grid-cols-1 sm:grid-cols-2 max-h-40 overflow-y-auto" : "grid-cols-2"
-      )}>
+      {/* Legend */}
+      <div className="space-y-1.5 px-4 pb-4">
         {slices.map((slice) => {
           const isActive = activeIndex === slice.index
           const delayMs = LEGEND_BASE_DELAY_MS + slice.index * LEGEND_STAGGER_MS
+          const pctDisplay = (slice.pct * 100).toFixed(1)
           return (
             <div
               key={slice.index}
               className={cn(
-                "flex items-center gap-2 text-xs animate-fade-up cursor-default rounded-md px-1 -mx-1 transition-all duration-200",
-                isActive && "bg-foreground/[0.05]",
+                "flex items-center gap-2.5 text-xs animate-fade-up cursor-default rounded-lg px-2 py-1.5 -mx-2 transition-all duration-200",
+                isActive && "bg-foreground/[0.04]",
                 activeIndex !== null && !isActive && "opacity-40"
               )}
               style={{ animationDelay: `${delayMs}ms` }}
@@ -266,21 +313,21 @@ export function SpendingDonutChart({ data, height = 250 }: SpendingDonutChartPro
                 className="w-2.5 h-2.5 rounded-full flex-shrink-0 transition-transform duration-200"
                 style={{
                   backgroundColor: slice.color,
-                  transform: isActive ? "scale(1.4)" : "scale(1)",
+                  transform: isActive ? "scale(1.3)" : "scale(1)",
                   boxShadow: isActive ? `0 0 6px ${slice.color}60` : "none",
                 }}
               />
               <span className={cn(
-                "truncate transition-colors duration-200",
-                isActive ? "text-foreground" : "text-foreground-muted"
+                "flex-1 truncate transition-colors duration-200",
+                isActive ? "text-foreground font-medium" : "text-foreground-muted"
               )}>
                 {slice.category}
               </span>
-              <span className="ml-auto font-data text-foreground-muted tabular-nums flex-shrink-0 text-[10px]">
-                {(slice.pct * 100).toFixed(1)}%
-              </span>
               <span className="font-data text-foreground tabular-nums flex-shrink-0">
                 {formatCurrency(slice.amount)}
+              </span>
+              <span className="font-data text-foreground-muted tabular-nums flex-shrink-0 w-10 text-right text-[10px]">
+                {pctDisplay}%
               </span>
             </div>
           )
