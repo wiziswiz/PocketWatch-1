@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
+import { usePathname } from "next/navigation"
 import { useChat } from "@/hooks/use-chat"
 import { ChatMessageBubble } from "./chat-message"
 import { ThreadList } from "./thread-list"
@@ -12,6 +13,7 @@ export function ChatPanel() {
     switchThread, deleteThread, closePanel,
   } = useChat()
 
+  const pathname = usePathname()
   const [input, setInput] = useState("")
   const [showThreads, setShowThreads] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -46,7 +48,8 @@ export function ChatPanel() {
     [handleSend]
   )
 
-  if (!isOpen) return null
+  // Hide floating panel on the full-page chat route to avoid duplicate inputs
+  if (!isOpen || pathname === "/chat") return null
 
   const isStreaming = status === "streaming" || status === "tool_running"
 
