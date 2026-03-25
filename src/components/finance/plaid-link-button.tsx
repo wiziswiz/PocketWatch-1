@@ -10,6 +10,7 @@ interface PlaidLinkButtonProps {
   onError?: (message: string) => void
   className?: string
   buttonLabel?: string
+  icon?: string
 }
 
 export function PlaidLinkButton({
@@ -18,6 +19,7 @@ export function PlaidLinkButton({
   onError,
   className,
   buttonLabel = "Connect with Plaid",
+  icon = "account_balance",
 }: PlaidLinkButtonProps) {
   const [linkToken, setLinkToken] = useState<string | null>(null)
   const [tokenError, setTokenError] = useState<string | null>(null)
@@ -80,7 +82,7 @@ export function PlaidLinkButton({
         className={className ?? "btn-primary flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium"}
         title={tokenError ? `${tokenError} — Click to retry` : undefined}
       >
-        <span className="material-symbols-rounded" style={{ fontSize: className ? 14 : 18 }}>account_balance</span>
+        <span className="material-symbols-rounded" style={{ fontSize: className ? 14 : 18 }}>{icon}</span>
         {isLoadingToken ? "..." : tokenError ? `${buttonLabel} ↻` : buttonLabel}
       </button>
     </div>

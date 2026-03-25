@@ -15,6 +15,8 @@ export {
   useAccountIdentity,
   useCreateLinkToken,
   useExchangePlaidToken,
+  useCreateReconnectToken,
+  useCompleteReconnect,
   usePlaidSyncStatus,
   useResyncPlaidData,
   useConnectSimpleFIN,

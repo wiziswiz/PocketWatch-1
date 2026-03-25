@@ -181,6 +181,22 @@ export async function createLinkToken(userId: string): Promise<string> {
   return response.data.link_token
 }
 
+/** Create a link token in "update mode" for reconnecting an existing item. */
+export async function createUpdateLinkToken(
+  userId: string,
+  accessToken: string,
+): Promise<string> {
+  const client = await getPlaidClient(userId)
+  const response = await client.linkTokenCreate({
+    user: { client_user_id: userId },
+    client_name: "PocketWatch",
+    access_token: accessToken,
+    country_codes: [CountryCode.Us],
+    language: "en",
+  })
+  return response.data.link_token
+}
+
 export async function exchangePublicToken(
   userId: string,
   publicToken: string

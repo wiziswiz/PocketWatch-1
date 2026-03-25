@@ -16,6 +16,7 @@ import { SimpleFINConnect } from "@/components/finance/simplefin-connect"
 import { ConfirmDialog } from "@/components/finance/confirm-dialog"
 import { ACCOUNT_TYPES, normalizeType } from "@/components/finance/accounts/accounts-constants"
 import { InstitutionAccordion } from "@/components/finance/accounts/institution-accordion"
+import { ReconnectBanner } from "@/components/finance/accounts/reconnect-banner"
 import { AccountTransactions } from "@/components/finance/accounts/account-transactions"
 import { AccountLiabilityDetails } from "@/components/finance/accounts/account-liability-details"
 import { StatementImportSection } from "@/components/finance/accounts/statement-import-section"
@@ -83,7 +84,7 @@ export default function FinanceAccountsPage() {
           .sort((a, b) => TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type))
         return { ...inst, accounts: filtered }
       })
-      .filter((inst) => inst.accounts.length > 0)
+      .filter((inst) => inst.accounts.length > 0 || inst.status === "error")
   }, [institutions, activeTab])
 
   const totalAssets = Math.round(canonical
@@ -125,8 +126,9 @@ export default function FinanceAccountsPage() {
             )
           }}
           onError={(message) => toast.error(message)}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-primary text-white hover:bg-primary-hover transition-colors disabled:opacity-50"
-          buttonLabel="Plaid"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-white hover:bg-primary-hover transition-colors disabled:opacity-50"
+          buttonLabel="+ Connect Account"
+          icon="add_link"
         />
       )}
       {activeProvider !== "plaid" && (
@@ -175,6 +177,9 @@ export default function FinanceAccountsPage() {
           </div>
         </div>
       )}
+
+      {/* Reconnect Banner — shown when any institution has an error */}
+      {institutions && <ReconnectBanner institutions={institutions} />}
 
       {isLoading ? (
         <div className="grid grid-cols-3 gap-4">{Array.from({ length: 3 }).map((_, i) => <FinanceCardSkeleton key={i} />)}</div>
@@ -228,6 +233,9 @@ export default function FinanceAccountsPage() {
               onToggleHidden={(accountId, isHidden) =>
                 updateAccount.mutate({ accountId, isHidden }, { onSuccess: () => toast.success(isHidden ? "Account hidden" : "Account shown") })
               }
+              onReconnect={inst.status === "error" ? () => {
+                document.getElementById("reconnect-banner")?.scrollIntoView({ behavior: "smooth", block: "center" })
+              } : undefined}
               syncPending={syncMutation.isPending}
             />
           ))}

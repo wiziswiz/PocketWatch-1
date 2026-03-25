@@ -142,6 +142,30 @@ export function useExchangePlaidToken() {
   })
 }
 
+// ─── Plaid Reconnect Hooks ──────────────────────────────────────
+
+export function useCreateReconnectToken() {
+  return useMutation({
+    mutationFn: (institutionId: string) =>
+      financeFetch<{ linkToken: string; institutionId: string; institutionName: string }>(
+        "/plaid/reconnect",
+        { method: "POST", body: JSON.stringify({ institutionId }) },
+      ),
+  })
+}
+
+export function useCompleteReconnect() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (institutionId: string) =>
+      financeFetch<{ success: boolean }>(
+        "/plaid/reconnect",
+        { method: "PATCH", body: JSON.stringify({ institutionId }) },
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: financeKeys.all }),
+  })
+}
+
 export function usePlaidSyncStatus() {
   return useQuery({
     queryKey: financeKeys.plaidSyncStatus(),

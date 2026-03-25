@@ -105,7 +105,11 @@ export async function POST(req: NextRequest) {
         })
         await db.financeInstitution.update({
           where: { id: institution.id },
-          data: { errorMessage: "Plaid connection expiring soon — please re-authenticate" },
+          data: {
+            status: "error",
+            errorCode: "PENDING_EXPIRATION",
+            errorMessage: "Plaid connection expiring soon — please re-authenticate",
+          },
         })
       }
     }

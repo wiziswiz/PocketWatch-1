@@ -17,6 +17,7 @@ export type {
 
 export {
   createLinkToken,
+  createUpdateLinkToken,
   exchangePublicToken,
   getAccounts,
   getBalances,

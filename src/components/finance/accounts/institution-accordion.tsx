@@ -41,6 +41,7 @@ export function InstitutionAccordion({
   onRenameAccount,
   onChangeAccountType,
   onToggleHidden,
+  onReconnect,
   syncPending,
 }: {
   inst: Institution
@@ -53,6 +54,7 @@ export function InstitutionAccordion({
   onRenameAccount: (accountId: string, name: string) => void
   onChangeAccountType: (accountId: string, type: string) => void
   onToggleHidden: (accountId: string, isHidden: boolean) => void
+  onReconnect?: () => void
   syncPending: boolean
 }) {
   const instTotal = inst.accounts.reduce((sum, a) => {
@@ -115,7 +117,16 @@ export function InstitutionAccordion({
         <div className="flex items-center gap-2 px-5 py-2.5 bg-error/5 border-t border-error/20">
           <span className="material-symbols-rounded text-error" style={{ fontSize: 16 }}>warning</span>
           <span className="text-xs text-error flex-1">{inst.errorMessage}</span>
-          <span className="text-[10px] text-error/60">Reconnect required</span>
+          {onReconnect ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); onReconnect() }}
+              className="px-3 py-1 text-xs font-medium text-error border border-error/30 rounded-lg hover:bg-error/10 transition-colors"
+            >
+              Reconnect
+            </button>
+          ) : (
+            <span className="text-[10px] text-error/60">Reconnect required</span>
+          )}
         </div>
       )}
 
