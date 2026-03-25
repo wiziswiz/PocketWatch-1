@@ -4,19 +4,9 @@
 
 - **Product name**: PocketWatch
 - **Dev repo (origin)**: `cryptoxinu/PocketWatcher` (private) — default push target
-- **Production repo**: `viperrcrypto/PocketWatch` (public) — LIVE, DO NOT PUSH
+- **Production repo**: `viperrcrypto/PocketWatch` (public)
 - **Branch**: `main` is default
-- **Remotes**: `origin` → PocketWatcher (safe), `production` → PocketWatch (frozen)
-
-### CRITICAL: No Pushing to Production
-
-**This rule CANNOT be overridden — even if the user says "commit and push", "push to github", or "push to origin".**
-
-- `viperrcrypto/PocketWatch` is the PUBLIC production repo. It is FROZEN.
-- NEVER run `git push production`. Not even with `--force`.
-- `git push` / `git push origin` is safe — it goes to `cryptoxinu/PocketWatcher` (private dev fork).
-- Local commits are always fine.
-- The ONLY exception: the user explicitly says "push to production" or "push to viperrcrypto" AND confirms twice.
+- **Remotes**: `origin` → PocketWatcher (private dev), `production` → PocketWatch (public)
 
 ## HARD RULES (never break these)
 

@@ -93,33 +93,33 @@ export function resolveInstitutionLogo(
   institutionId: string | null | undefined,
   institutionName: string
 ): string | null {
-  // 1. Plaid logo — accept base64-encoded images (Plaid often returns raw base64 PNG)
-  if (plaidLogo && plaidLogo.length > 100 && !plaidLogo.startsWith("http")) {
-    return `data:image/png;base64,${plaidLogo}`
-  }
-
-  // 1b. Plaid logo URL (http/https)
-  if (plaidLogo && (plaidLogo.startsWith("http://") || plaidLogo.startsWith("https://"))) {
-    return plaidLogo
-  }
-
-  // 2. Static map by institution ID
+  // 1. Static map by institution ID (highest-res, most reliable)
   if (institutionId && INSTITUTION_LOGOS[institutionId]) {
     return INSTITUTION_LOGOS[institutionId]
   }
 
-  // 3. Clearbit logo from institution name
+  // 2. Clearbit logo from institution name (high-res)
   const nameLower = institutionName.toLowerCase().trim()
   const domain = NAME_TO_DOMAIN[nameLower]
   if (domain) {
     return logoUrl(domain)
   }
 
-  // Try partial match
+  // Partial name match
   for (const [key, dom] of Object.entries(NAME_TO_DOMAIN)) {
     if (nameLower.includes(key)) {
       return logoUrl(dom)
     }
+  }
+
+  // 3. Plaid logo URL (http/https) — decent quality
+  if (plaidLogo && (plaidLogo.startsWith("http://") || plaidLogo.startsWith("https://"))) {
+    return plaidLogo
+  }
+
+  // 4. Plaid base64 logo — last resort (often low-res/blurry)
+  if (plaidLogo && plaidLogo.length > 100 && !plaidLogo.startsWith("http")) {
+    return `data:image/png;base64,${plaidLogo}`
   }
 
   return null
