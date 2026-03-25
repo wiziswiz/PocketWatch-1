@@ -97,16 +97,16 @@ export function buildProgramBookingUrl(
   const [year, month, day] = date.split("-")
   const cabinCode = cabin === "first" ? "F" : cabin === "business" ? "J" : "Y"
 
-  // Use simplest, most stable URL patterns — airlines break deep links frequently
+  // Award booking deep links — sourced from battle-tested patterns
   switch (program) {
     case "ALASKA":
-      return `https://www.alaskaair.com/shopping/flights?prior=award&fromCity=${origin}&toCity=${destination}&departDate=${month}%2F${day}%2F${year}&adults=1`
+      return `https://www.alaskaair.com/booking/search?numAdults=1&fromCity=${origin}&toCity=${destination}&fromDate=${date}`
     case "UNITED":
-      return `https://www.united.com/en/us/fsr/choose-flights?f=${origin}&t=${destination}&d=${date}&tt=1&at=1&sc=7&px=1&taxng=1&clm=7&tqp=A`
+      return `https://www.united.com/en/us/fsr/choose-flights?f=${origin}&t=${destination}&d=${date}&tt=1&at=1&sc=7&px=1&taxng=1&newHP=True&idx=1`
     case "AMERICAN":
-      return `https://www.aa.com/booking/search?locale=en_US&pax=1&adult=1&type=OneWay&searchType=Award&origin=${origin}&destination=${destination}&departureDate=${date}`
+      return `https://www.aa.com/booking/find-flights?locale=en_US&slices=%5B%7B%22orig%22%3A%22${origin}%22%2C%22dest%22%3A%22${destination}%22%2C%22date%22%3A%22${date}%22%7D%5D&adults=1&searchType=Award`
     case "DELTA":
-      return `https://www.delta.com/flight-search/search?tripType=ONE_WAY&priceSchedule=MILES&origin=${origin}&destination=${destination}&departureDate=${date}&paxCount=1`
+      return `https://www.delta.com/flight-search/book-a-flight?tripType=ONE_WAY&departureDate=${date}&originCode=${origin}&destinationCode=${destination}&numOfPassengers=1`
     case "AEROPLAN":
       return `https://www.aircanada.com/aeroplan/redeem/availability/outbound?org0=${origin}&dest0=${destination}&departureDate0=${date}&ADT=1&tripType=O&lang=en-CA`
     case "FLYING_BLUE":
@@ -126,11 +126,11 @@ export function buildProgramBookingUrl(
     case "QANTAS":
       return `https://www.qantas.com/au/en/book-a-trip/flights.html?from=${origin}&to=${destination}&departure=${date}&adults=1&isUsingRewardPoints=true`
     case "TURKISH":
-      return `https://www.turkishairlines.com/en-us/miles-and-smiles/spend-miles/award-ticket/`
+      return `https://www.turkishairlines.com/en-us/flights/?origin=${origin}&destination=${destination}&departureDate=${date}&adult=1`
     case "HAWAIIAN":
       return `https://www.hawaiianairlines.com/book/results?SearchType=Award&From=${origin}&To=${destination}&DepartureDate=${date}&Adults=1`
     case "JETBLUE":
-      return `https://www.jetblue.com/booking/flights?from=${origin}&to=${destination}&depart=${date}&adults=1&fare=points`
+      return `https://jbrest.jetblue.com/lfs-rwb/outboundLFS.action?origin=${origin}&destination=${destination}&dep_date=${date}`
     case "TAP":
       return `https://www.flytap.com/en-us/book?type=MilesGo&from=${origin}&to=${destination}&date=${date}&pax=1`
     case "IBERIA":
@@ -207,19 +207,20 @@ export const BANK_PROGRAMS = new Set([
 
 /** Build a direct airline booking URL for cash flights (fallback when Google token expires) */
 export function buildCashBookingUrl(airlineCode: string, origin: string, destination: string, date: string): string {
+  // Cash booking deep links — sourced from battle-tested patterns
   switch (airlineCode) {
-    case "AA": return `https://www.aa.com/booking/search?locale=en_US&pax=1&adult=1&type=OneWay&origin=${origin}&destination=${destination}&departureDate=${date}`
-    case "UA": return `https://www.united.com/ual/en/us/flight-search/book-a-flight/results/rev?f=${origin}&t=${destination}&d=${date}&tt=1&at=1&sc=7&px=1&taxng=1`
-    case "DL": return `https://www.delta.com/flight-search/search?cacheKeySuffix=b&action=findFlights&tripType=ONE_WAY&origin=${origin}&destination=${destination}&departureDate=${date}&paxCount=1`
-    case "WN": return `https://www.southwest.com/air/booking/select.html?originationAirportCode=${origin}&destinationAirportCode=${destination}&departureDate=${date}&adultPassengersCount=1&tripType=oneway`
-    case "B6": return `https://www.jetblue.com/booking/flights?from=${origin}&to=${destination}&depart=${date}&isMultiCity=false&noOfRoute=1&adults=1&children=0&infants=0`
-    case "AS": return `https://www.alaskaair.com/booking/choose-flights?prior=revenue&orig=${origin}&dest=${destination}&date=${date.replace(/-/g, "")}&ADT=1`
-    case "F9": return `https://booking.flyfrontier.com/Flight/Select?o1=${origin}&d1=${destination}&dd1=${date}&ADT=1&mon=true`
-    case "NK": return `https://www.spirit.com/book/flights?DN=1&DD=${date}&OD=${origin}%2C${destination}&ADT=1&CHD=0&INF=0`
+    case "AA": return `https://www.aa.com/booking/find-flights?slices=%5B%7B%22orig%22%3A%22${origin}%22%2C%22dest%22%3A%22${destination}%22%2C%22date%22%3A%22${date}%22%7D%5D&adult=1`
+    case "UA": return `https://www.united.com/en/us/fsr/choose-flights?f=${origin}&t=${destination}&d=${date}&tt=1&sc=7&px=1&taxng=1&newHP=True`
+    case "DL": return `https://www.delta.com/flight-search/search?tripType=oneWay&departureDate=${date}&origin=${origin}&destination=${destination}&pax=1`
+    case "WN": return `https://www.southwest.com/air/booking/select.html?originationAirportCode=${origin}&destinationAirportCode=${destination}&departureDate=${date}&adultsCount=1`
+    case "B6": return `https://jbrest.jetblue.com/lfs-rwb/outboundLFS.action?origin=${origin}&destination=${destination}&dep_date=${date}`
+    case "AS": return `https://www.alaskaair.com/booking/search?numAdults=1&fromCity=${origin}&toCity=${destination}&fromDate=${date}`
+    case "F9": return `https://www.flyfrontier.com/travel/flight-search/?departureDate=${date}&origin=${origin}&destination=${destination}&adults=1`
+    case "NK": return `https://www.spirit.com/book/flights?f=${origin}&t=${destination}&d=${date}&r=&p=1`
     case "HA": return `https://www.hawaiianairlines.com/book/results?SearchType=Revenue&From=${origin}&To=${destination}&DepartureDate=${date}&Adults=1`
     case "SY": return `https://www.suncountry.com/book/flights?from=${origin}&to=${destination}&depart=${date}&adults=1&tripType=oneWay`
     case "BA": return `https://www.britishairways.com/travel/book/public/en_us?from=${origin}&to=${destination}&depDate=${date}&cabin=M&ad=1&ch=0&inf=0`
-    case "AF": case "KL": return `https://www.airfrance.us/search/offers?pax=1:0:0:0:0:0:0:0&cabinClass=ECONOMY&activeConnection=0&connections=${origin}-A>${destination}-A:${date}`
+    case "AF": case "KL": return `https://wwws.airfrance.us/search/offers?pax=1:0:0:0:0:0:0:0&cabinClass=ECONOMY&activeConnection=0&connections=${origin}-A>${destination}-A:${date}`
     case "LH": case "OS": case "LX": case "SN": return `https://www.lufthansa.com/us/en/flight-search?adults=1&cabinClass=economy&flightType=ONE_WAY&dcty=${origin}&acty=${destination}&out=${date}`
     case "AC": return `https://www.aircanada.com/booking/search?org0=${origin}&dest0=${destination}&departureDate0=${date}&ADT=1&tripType=O&lang=en-CA`
     case "EK": return `https://www.emirates.com/us/english/book/?origin=${origin}&destination=${destination}&departDate=${date}&pax=1&class=economy`
