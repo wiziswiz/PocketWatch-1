@@ -16,6 +16,7 @@ import {
   togglePanel,
   closePanel,
   openPanel,
+  setPageContext,
 } from "@/lib/chat/store"
 
 export function useChat() {
@@ -38,5 +39,6 @@ export function useChat() {
     togglePanel,
     closePanel,
     openPanel,
+    setPageContext,
   }
 }

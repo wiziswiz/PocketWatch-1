@@ -9,6 +9,7 @@ import { db } from "@/lib/db"
 import { encryptCredential, decryptCredential } from "@/lib/finance/crypto"
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod/v4"
+import { parsePointMeCredential } from "@/lib/travel/pointme-auth"
 
 function maskKey(key: string): string {
   if (key.length <= 8) return "****"
@@ -21,13 +22,13 @@ export async function GET() {
 
   try {
     const credentials = await db.financeCredential.findMany({
-      where: { userId: user.id, service: { in: ["roame", "serpapi", "atf", "roame_refresh"] } },
+      where: { userId: user.id, service: { in: ["roame", "serpapi", "atf", "roame_refresh", "pointme"] } },
     })
 
     const services = await Promise.all(
       credentials.map(async (cred) => {
         const key = await decryptCredential(cred.encryptedKey)
-        const displayKey = cred.service === "roame" ? "session-configured" : key
+        const displayKey = cred.service === "roame" || cred.service === "pointme" ? "session-configured" : key
         return {
           service: cred.service,
           maskedKey: maskKey(displayKey),
@@ -43,7 +44,7 @@ export async function GET() {
 }
 
 const saveSchema = z.object({
-  service: z.enum(["roame", "serpapi", "atf", "roame_refresh"]),
+  service: z.enum(["roame", "serpapi", "atf", "roame_refresh", "pointme"]),
   key: z.string().min(1, "Key is required"),
 })
 
@@ -58,6 +59,27 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // Parse point.me credential: accepts raw JWT or full session JSON
+    // Extracts accessToken → stored as "pointme", refreshToken → stored as "pointme_refresh"
+    if (parsed.data.service === "pointme") {
+      try {
+        const { accessToken, refreshToken } = parsePointMeCredential(parsed.data.key)
+        parsed.data.key = accessToken
+
+        // Auto-store refresh token if present
+        if (refreshToken) {
+          const refreshEnc = await encryptCredential(refreshToken)
+          await db.financeCredential.upsert({
+            where: { userId_service: { userId: user.id, service: "pointme_refresh" } },
+            create: { userId: user.id, service: "pointme_refresh", encryptedKey: refreshEnc, encryptedSecret: refreshEnc, environment: "production" },
+            update: { encryptedKey: refreshEnc, encryptedSecret: refreshEnc },
+          })
+        }
+      } catch (err) {
+        return apiError("T2014", (err as Error).message, 400)
+      }
+    }
+
     // Normalize Roame credential: accept raw JWT or JSON with session field
     if (parsed.data.service === "roame") {
       try {
@@ -103,7 +125,7 @@ export async function POST(req: NextRequest) {
 }
 
 const deleteSchema = z.object({
-  service: z.enum(["roame", "serpapi", "atf", "roame_refresh"]),
+  service: z.enum(["roame", "serpapi", "atf", "roame_refresh", "pointme"]),
 })
 
 export async function DELETE(req: NextRequest) {
@@ -118,8 +140,12 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
+    const servicesToDelete = parsed.data.service === "pointme"
+      ? [parsed.data.service, "pointme_refresh"]
+      : [parsed.data.service]
+
     await db.financeCredential.deleteMany({
-      where: { userId: user.id, service: parsed.data.service },
+      where: { userId: user.id, service: { in: servicesToDelete } },
     })
 
     return NextResponse.json({ deleted: true })

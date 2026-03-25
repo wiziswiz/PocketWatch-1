@@ -16,7 +16,7 @@ export function useTravelCredentials() {
 export function useSaveTravelCredential() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { service: "roame" | "serpapi" | "atf" | "roame_refresh"; key: string }) =>
+    mutationFn: (data: { service: "roame" | "serpapi" | "atf" | "roame_refresh" | "pointme"; key: string }) =>
       travelFetch<{ saved: boolean }>("/credentials", {
         method: "POST",
         body: JSON.stringify(data),
@@ -28,7 +28,7 @@ export function useSaveTravelCredential() {
 export function useDeleteTravelCredential() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (service: "roame" | "serpapi" | "atf" | "roame_refresh") =>
+    mutationFn: (service: "roame" | "serpapi" | "atf" | "roame_refresh" | "pointme") =>
       travelFetch<{ deleted: boolean }>(`/credentials?service=${service}`, {
         method: "DELETE",
       }),

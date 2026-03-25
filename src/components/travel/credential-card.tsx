@@ -21,12 +21,14 @@ interface CredentialCardProps {
   isSaving: boolean
   isDeleting: boolean
   saveLabel?: string
+  // Optional secondary action (e.g. "Paste & Connect")
+  secondaryAction?: { label: string; onClick: () => void }
 }
 
 export function CredentialCard({
   icon, title, badge, description, credential,
   inputValue, onInputChange, placeholder, inputType = "text", rows = 1,
-  onSave, onDelete, isSaving, isDeleting, saveLabel = "Save",
+  onSave, onDelete, isSaving, isDeleting, saveLabel = "Save", secondaryAction,
 }: CredentialCardProps) {
   return (
     <div className="card p-4 space-y-3">
@@ -67,16 +69,27 @@ export function CredentialCard({
             rows={rows}
             className="w-full bg-background border border-card-border rounded-lg px-3 py-2 text-xs font-mono text-foreground placeholder:text-foreground-muted/50 focus:outline-none focus:border-primary transition-colors resize-none"
           />
-          <button
-            onClick={onSave}
-            disabled={!inputValue.trim() || isSaving}
-            className={cn(
-              "px-4 py-2 rounded-lg text-xs font-medium transition-colors",
-              inputValue.trim() ? "btn-primary" : "bg-card-border text-foreground-muted cursor-not-allowed",
+          <div className="flex gap-2">
+            <button
+              onClick={onSave}
+              disabled={!inputValue.trim() || isSaving}
+              className={cn(
+                "px-4 py-2 rounded-lg text-xs font-medium transition-colors",
+                inputValue.trim() ? "btn-primary" : "bg-card-border text-foreground-muted cursor-not-allowed",
+              )}
+            >
+              {isSaving ? "Saving..." : saveLabel}
+            </button>
+            {secondaryAction && (
+              <button
+                onClick={secondaryAction.onClick}
+                disabled={isSaving}
+                className="px-4 py-2 rounded-lg text-xs font-medium btn-secondary transition-colors"
+              >
+                {secondaryAction.label}
+              </button>
             )}
-          >
-            {isSaving ? "Saving..." : saveLabel}
-          </button>
+          </div>
         </div>
       ) : (
         <div className="flex gap-2">

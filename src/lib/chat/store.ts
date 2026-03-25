@@ -3,7 +3,7 @@
  * so it survives Next.js page navigation. Binds to React via useSyncExternalStore.
  */
 
-import type { ChatMessage, ChatThread, ChatStatus, ChatStoreState } from "./types"
+import type { ChatMessage, ChatThread, ChatStatus, ChatStoreState, PageContext } from "./types"
 
 const STORAGE_KEY = "pocketllm-threads"
 const MAX_THREADS = 20
@@ -16,6 +16,7 @@ let activeThreadId: string | null = null
 let status: ChatStatus = "idle"
 let isOpen = false
 let abortController: AbortController | null = null
+let pageContext: PageContext | null = null
 const listeners = new Set<() => void>()
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -93,6 +94,10 @@ export function closePanel() {
 export function openPanel() {
   isOpen = true
   notify()
+}
+
+export function setPageContext(ctx: PageContext | null) {
+  pageContext = ctx
 }
 
 export function newThread(): string {
@@ -189,6 +194,7 @@ export async function sendMessage(content: string) {
           content: m.content,
         })),
         threadId: thread.id,
+        pageContext: pageContext ?? undefined,
       }),
       signal: controller.signal,
     })

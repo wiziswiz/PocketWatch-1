@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { useTravelCredentials, useSaveTravelCredential, useDeleteTravelCredential } from "@/hooks/travel"
 import { toast } from "sonner"
 import { CredentialCard } from "./credential-card"
@@ -14,13 +14,26 @@ export function TravelSettingsForm() {
   const [serpApiKey, setSerpApiKey] = useState("")
   const [atfApiKey, setAtfApiKey] = useState("")
   const [refreshToken, setRefreshToken] = useState("")
+  const [pointmeToken, setPointmeToken] = useState("")
+
+  const POINTME_SCRIPT = `copy(JSON.stringify(await(await fetch('/api/auth/session')).json()))`
+
+  const handleCopyScript = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(POINTME_SCRIPT)
+      toast.success("Script copied — paste it in the point.me browser console")
+    } catch {
+      toast.error("Failed to copy — manually copy the script shown above")
+    }
+  }, [POINTME_SCRIPT])
 
   const roameCred = data?.services.find(s => s.service === "roame")
   const serpApiCred = data?.services.find(s => s.service === "serpapi")
   const atfCred = data?.services.find(s => s.service === "atf")
   const refreshCred = data?.services.find(s => s.service === "roame_refresh")
+  const pointmeCred = data?.services.find(s => s.service === "pointme")
 
-  const save = async (service: "roame" | "serpapi" | "atf" | "roame_refresh", key: string, label: string, reset: () => void) => {
+  const save = async (service: "roame" | "serpapi" | "atf" | "roame_refresh" | "pointme", key: string, label: string, reset: () => void) => {
     if (!key.trim()) return
     try {
       await saveMutation.mutateAsync({ service, key: key.trim() })
@@ -31,10 +44,29 @@ export function TravelSettingsForm() {
     }
   }
 
-  const handleDelete = async (service: "roame" | "serpapi" | "atf" | "roame_refresh") => {
+  const handlePasteConnect = async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      if (!text.trim()) {
+        toast.error("Clipboard is empty — click the bookmarklet on point.me first")
+        return
+      }
+      await saveMutation.mutateAsync({ service: "pointme", key: text.trim() })
+      toast.success("point.me connected — token will auto-refresh")
+    } catch (err) {
+      const msg = (err as Error).message
+      if (msg.includes("clipboard") || msg.includes("permission")) {
+        toast.error("Clipboard access denied — paste manually instead")
+      } else {
+        toast.error(msg)
+      }
+    }
+  }
+
+  const handleDelete = async (service: "roame" | "serpapi" | "atf" | "roame_refresh" | "pointme") => {
     try {
       await deleteMutation.mutateAsync(service)
-      const names: Record<string, string> = { roame: "Roame", serpapi: "SerpAPI", atf: "ATF", roame_refresh: "Roame refresh token" }
+      const names: Record<string, string> = { roame: "Roame", serpapi: "SerpAPI", atf: "ATF", roame_refresh: "Roame refresh token", pointme: "point.me" }
       toast.success(`${names[service] || service} credential removed`)
     } catch (err) {
       toast.error((err as Error).message)
@@ -117,6 +149,41 @@ export function TravelSettingsForm() {
         onDelete={() => handleDelete("atf")}
         isSaving={saveMutation.isPending}
         isDeleting={deleteMutation.isPending}
+      />
+
+      <CredentialCard
+        icon="travel_explore"
+        title="point.me"
+        badge={pointmeCred ? "Auto-refresh enabled" : undefined}
+        credential={pointmeCred}
+        description={
+          <>
+            Searches all major airline programs with real-time availability.{" "}
+            <a href="https://point.me" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Login to point.me</a>
+            {" → "}open Console (F12) → click{" "}
+            <button
+              type="button"
+              onClick={handleCopyScript}
+              className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/20 text-primary text-[10px] font-bold rounded-full border border-primary/30 hover:bg-primary/30 transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-rounded" style={{ fontSize: 12 }}>content_copy</span>
+              Copy Script
+            </button>
+            {" → paste in console → Enter → come back → "}
+            <strong>Paste & Connect</strong>. Token auto-refreshes.
+          </>
+        }
+        inputType="textarea"
+        rows={3}
+        inputValue={pointmeToken}
+        onInputChange={setPointmeToken}
+        placeholder='Paste session JSON or raw JWT — or use "Paste & Connect" after clicking the bookmarklet'
+        onSave={() => save("pointme", pointmeToken, "point.me connected — token will auto-refresh", () => setPointmeToken(""))}
+        onDelete={() => handleDelete("pointme")}
+        isSaving={saveMutation.isPending}
+        isDeleting={deleteMutation.isPending}
+        saveLabel="Save Session"
+        secondaryAction={{ label: "Paste & Connect", onClick: handlePasteConnect }}
       />
 
       <CredentialCard

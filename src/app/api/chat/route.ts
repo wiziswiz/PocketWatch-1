@@ -12,6 +12,7 @@ const MAX_HISTORY_MESSAGES = 20
 interface ChatRequestBody {
   messages: { role: "user" | "assistant"; content: string }[]
   threadId: string
+  pageContext?: { page: string; summary?: string }
 }
 
 export async function POST(req: Request) {
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
       }
 
       try {
-        await runAgentLoop(provider, messages, user.id, send)
+        await runAgentLoop(provider, messages, user.id, send, body.pageContext)
         send("done", {})
       } catch (err) {
         send("error", { error: (err as Error).message || "Stream failed" })

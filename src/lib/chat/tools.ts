@@ -4,6 +4,7 @@
  */
 
 import { db } from "@/lib/db"
+import { getFlightSearchSummary, getFlightResults } from "./flight-tools"
 
 type ToolInput = Record<string, unknown>
 
@@ -25,6 +26,10 @@ export async function executeTool(name: string, input: ToolInput, userId: string
       return getInvestments(userId)
     case "get_credit_cards":
       return getCreditCards(userId)
+    case "get_flight_search_summary":
+      return getFlightSearchSummary(userId)
+    case "get_flight_results":
+      return getFlightResults(userId, input)
     default:
       return JSON.stringify({ error: `Unknown tool: ${name}` })
   }
@@ -315,3 +320,4 @@ async function getCreditCards(userId: string): Promise<string> {
     }))
   )
 }
+

@@ -27,6 +27,11 @@ export interface ChatThread {
 
 export type ChatStatus = "idle" | "streaming" | "tool_running" | "error"
 
+export interface PageContext {
+  page: string
+  summary?: string
+}
+
 export interface ChatStoreState {
   threads: ChatThread[]
   activeThreadId: string | null

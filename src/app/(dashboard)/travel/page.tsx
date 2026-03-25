@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { useFlightSearch, useTravelBalances } from "@/hooks/travel"
+import { useChat } from "@/hooks/use-chat"
 import { FlightSearchForm } from "@/components/travel/flight-search-form"
 import { FlightResults, type FlightResultsHandle } from "@/components/travel/flight-results"
 import { PocketWatchPicks } from "@/components/travel/pocketwatch-picks"
@@ -12,8 +13,22 @@ import type { SearchConfig } from "@/types/travel"
 export default function TravelPage() {
   const { status, progress, results, error, search, isSearching, recentSearches } = useFlightSearch()
   const { data: balancesData } = useTravelBalances()
+  const { isOpen: chatOpen, setPageContext } = useChat()
   const [lastConfig, setLastConfig] = useState<SearchConfig | null>(null)
   const flightResultsRef = useRef<FlightResultsHandle>(null)
+
+  // Tell PocketLLM about flight results so the AI can answer questions
+  useEffect(() => {
+    if (results) {
+      setPageContext({
+        page: "flight-search",
+        summary: `${results.flights.length} flights: ${results.meta.origin} → ${results.meta.destination}, ${results.meta.departureDate}`,
+      })
+    } else {
+      setPageContext(null)
+    }
+    return () => setPageContext(null)
+  }, [results, setPageContext])
 
   const handlePickClick = useCallback((flightId: string) => {
     flightResultsRef.current?.clearFilters()
@@ -56,7 +71,7 @@ export default function TravelPage() {
       )}
 
       {results && (
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+        <div className={`grid grid-cols-1 ${chatOpen ? "2xl:grid-cols-[1fr_300px]" : "lg:grid-cols-[1fr_300px]"} gap-6`}>
           {/* Main content */}
           <div className="space-y-6 min-w-0">
             {/* Insights */}

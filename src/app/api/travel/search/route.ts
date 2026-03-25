@@ -10,6 +10,8 @@ import { decryptCredential, encryptCredential } from "@/lib/finance/crypto"
 import { runSearch, type SearchProgress } from "@/lib/travel/search-orchestrator"
 import { cardProfilesToBalances } from "@/lib/travel/balance-adapter"
 import { isSessionExpired, refreshFirebaseToken, buildRoameSession } from "@/lib/travel/roame-auth"
+import { isPointMeTokenExpired, refreshPointMeToken } from "@/lib/travel/pointme-auth"
+import { setUserFlightResults } from "@/lib/travel/flight-results-cache"
 import type { SearchConfig, RoameCredentials } from "@/types/travel"
 
 export const dynamic = "force-dynamic"
@@ -53,16 +55,22 @@ export async function GET(req: Request) {
 
   // Load credentials
   const creds = await db.financeCredential.findMany({
-    where: { userId: user.id, service: { in: ["roame", "serpapi", "atf", "roame_refresh"] } },
+    where: { userId: user.id, service: { in: ["roame", "serpapi", "atf", "roame_refresh", "pointme", "pointme_refresh"] } },
   })
 
   let roameSession: RoameCredentials | undefined
   let serpApiKey: string | undefined
   let atfApiKey: string | undefined
   let refreshToken: string | undefined
+  let pointmeToken: string | undefined
+  let pointmeRefreshToken: string | undefined
 
   for (const cred of creds) {
-    if (cred.service === "roame") {
+    if (cred.service === "pointme") {
+      pointmeToken = await decryptCredential(cred.encryptedKey)
+    } else if (cred.service === "pointme_refresh") {
+      pointmeRefreshToken = await decryptCredential(cred.encryptedKey)
+    } else if (cred.service === "roame") {
       const decrypted = await decryptCredential(cred.encryptedKey)
       const parsed = JSON.parse(decrypted) as RoameCredentials
       if (isSessionExpired(parsed.session)) {
@@ -106,9 +114,37 @@ export async function GET(req: Request) {
     }
   }
 
-  console.log(`[travel] Credentials: roame=${!!roameSession} serpapi=${!!serpApiKey} atf=${!!atfApiKey} refreshToken=${!!refreshToken} (found ${creds.length} credential rows: ${creds.map(c => c.service).join(", ") || "none"})`)
+  // Auto-refresh point.me token if expired but refresh token available
+  if (pointmeRefreshToken && (!pointmeToken || isPointMeTokenExpired(pointmeToken))) {
+    try {
+      const result = await refreshPointMeToken(pointmeRefreshToken)
+      pointmeToken = result.accessToken
 
-  if (!roameSession && !serpApiKey && !atfApiKey) {
+      // Persist new token + possibly rotated refresh token
+      const newTokenEnc = await encryptCredential(result.accessToken)
+      const newRefreshEnc = await encryptCredential(result.refreshToken)
+      await Promise.all([
+        db.financeCredential.upsert({
+          where: { userId_service: { userId: user.id, service: "pointme" } },
+          create: { userId: user.id, service: "pointme", encryptedKey: newTokenEnc, encryptedSecret: newTokenEnc, environment: "production" },
+          update: { encryptedKey: newTokenEnc, encryptedSecret: newTokenEnc },
+        }),
+        db.financeCredential.upsert({
+          where: { userId_service: { userId: user.id, service: "pointme_refresh" } },
+          create: { userId: user.id, service: "pointme_refresh", encryptedKey: newRefreshEnc, encryptedSecret: newRefreshEnc, environment: "production" },
+          update: { encryptedKey: newRefreshEnc, encryptedSecret: newRefreshEnc },
+        }),
+      ])
+      console.log("[travel] point.me token auto-refreshed via Auth0")
+    } catch (err) {
+      console.warn("[travel] point.me auto-refresh failed:", (err as Error).message)
+      pointmeToken = undefined
+    }
+  }
+
+  console.log(`[travel] Credentials: roame=${!!roameSession} serpapi=${!!serpApiKey} atf=${!!atfApiKey} pointme=${!!pointmeToken} refreshToken=${!!refreshToken} (found ${creds.length} credential rows: ${creds.map(c => c.service).join(", ") || "none"})`)
+
+  if (!roameSession && !serpApiKey && !atfApiKey && !pointmeToken) {
     return apiError("T1005", "No search credentials configured. Add Roame session, SerpAPI key, or ATF key in Travel Settings.", 400)
   }
 
@@ -146,7 +182,8 @@ export async function GET(req: Request) {
       }
 
       try {
-        const results = await runSearch(config, { roameSession, serpApiKey, atfApiKey }, balances, onProgress)
+        const results = await runSearch(config, { roameSession, serpApiKey, atfApiKey, pointmeToken }, balances, onProgress)
+        setUserFlightResults(user.id, results)
         send("result", results)
       } catch (err) {
         send("error", { error: (err as Error).message })

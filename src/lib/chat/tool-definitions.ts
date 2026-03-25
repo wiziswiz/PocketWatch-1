@@ -87,4 +87,31 @@ export const TOOL_DEFINITIONS = [
       required: [] as string[],
     },
   },
+  {
+    name: "get_flight_search_summary",
+    description: "Get a summary of the user's most recent flight search — route, dates, total flights found, cabin/airline breakdowns, price ranges, recommendations, and points balances. Call this first when the user asks about flights.",
+    input_schema: {
+      type: "object" as const,
+      properties: {},
+      required: [] as string[],
+    },
+  },
+  {
+    name: "get_flight_results",
+    description: "Search and filter the user's most recent flight search results. Returns matching flights with pricing, value scores, and booking links.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        cabin: { type: "string", description: "Filter by cabin class: economy, premium_economy, business, or first." },
+        airline: { type: "string", description: "Filter by airline name (case-insensitive partial match)." },
+        type: { type: "string", description: "Filter by type: award or cash." },
+        stops: { type: "number", description: "Maximum number of stops (0 for nonstop, 1, 2)." },
+        max_points: { type: "number", description: "Maximum points cost." },
+        min_value_score: { type: "number", description: "Minimum value score (0-100)." },
+        sort_by: { type: "string", description: "Sort by: value_score (default), points, cash_price, duration, or cpp." },
+        limit: { type: "number", description: "Max results to return (default 10, max 30)." },
+      },
+      required: [] as string[],
+    },
+  },
 ]

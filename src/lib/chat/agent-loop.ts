@@ -60,19 +60,25 @@ export async function resolveProvider(userId: string): Promise<ResolvedProvider>
 
 // ─── Dispatch ───────────────────────────────────────────────────
 
+export interface PageContextHint {
+  page: string
+  summary?: string
+}
+
 export async function runAgentLoop(
   provider: ResolvedProvider,
   messages: { role: string; content: string }[],
   userId: string,
-  send: SendFn
+  send: SendFn,
+  pageContext?: PageContextHint
 ) {
   if (provider.type === "ai_claude_api") {
-    return runClaudeAPILoop(provider.apiKey, provider.model, messages, userId, send)
+    return runClaudeAPILoop(provider.apiKey, provider.model, messages, userId, send, pageContext)
   }
   if (provider.type === "ai_claude_cli") {
-    return runCLILoop(provider.model, messages, userId, send)
+    return runCLILoop(provider.model, messages, userId, send, pageContext)
   }
-  return runGenericLoop(provider, messages, userId, send)
+  return runGenericLoop(provider, messages, userId, send, pageContext)
 }
 
 // ─── Claude API Loop (native tool_use) ──────────────────────────
@@ -93,7 +99,8 @@ async function runClaudeAPILoop(
   model: string | undefined,
   messages: { role: string; content: string }[],
   userId: string,
-  send: SendFn
+  send: SendFn,
+  pageContext?: PageContextHint
 ) {
   const claudeMessages = messages.map((m) => ({
     role: m.role as "user" | "assistant",
@@ -112,7 +119,7 @@ async function runClaudeAPILoop(
         model: model ?? "claude-sonnet-4-20250514",
         max_tokens: 4096,
         stream: true,
-        system: SYSTEM_PROMPT,
+        system: SYSTEM_PROMPT + buildContextPrefix(pageContext),
         tools: TOOL_DEFINITIONS,
         messages: claudeMessages,
       }),
@@ -308,9 +315,10 @@ async function runCLILoop(
   model: string | undefined,
   messages: { role: string; content: string }[],
   userId: string,
-  send: SendFn
+  send: SendFn,
+  pageContext?: PageContextHint
 ) {
-  const systemPrompt = buildToolSystemPrompt()
+  const systemPrompt = buildToolSystemPrompt(pageContext)
   const toolContext: string[] = []
 
   for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
@@ -365,7 +373,8 @@ async function runGenericLoop(
   provider: ResolvedProvider,
   messages: { role: string; content: string }[],
   userId: string,
-  send: SendFn
+  send: SendFn,
+  pageContext?: PageContextHint
 ) {
   const config: AIProviderConfig = {
     provider: provider.type,
@@ -376,7 +385,7 @@ async function runGenericLoop(
   const toolContext: string[] = []
 
   for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
-    const prompt = buildToolSystemPrompt() + "\n\n" + buildUserMessage(messages, toolContext)
+    const prompt = buildToolSystemPrompt(pageContext) + "\n\n" + buildUserMessage(messages, toolContext)
     const response = await callAIProviderRaw(config, prompt)
 
     const toolCall = parseToolCall(response)
@@ -405,7 +414,16 @@ async function runGenericLoop(
 
 // ─── Shared Helpers ─────────────────────────────────────────────
 
-function buildToolSystemPrompt(): string {
+function buildContextPrefix(pageContext?: PageContextHint): string {
+  if (!pageContext) return ""
+  if (pageContext.page === "flight-search") {
+    const detail = pageContext.summary ? ` (${pageContext.summary})` : ""
+    return `\n\nNote: The user is currently viewing flight search results${detail}. Use the flight tools to answer their questions.\n`
+  }
+  return ""
+}
+
+function buildToolSystemPrompt(pageContext?: PageContextHint): string {
   const toolDescriptions = TOOL_DEFINITIONS.map((t) => {
     const params = Object.entries(t.input_schema.properties || {})
       .map(([k, v]) => `    ${k}: ${(v as { description?: string }).description ?? ""}`)
@@ -413,7 +431,9 @@ function buildToolSystemPrompt(): string {
     return `- ${t.name}: ${t.description}${params ? "\n" + params : ""}`
   }).join("\n")
 
-  return `${SYSTEM_PROMPT}
+  const contextPrefix = buildContextPrefix(pageContext)
+
+  return `${SYSTEM_PROMPT}${contextPrefix}
 
 ## Tools
 You have access to real-time financial data tools. When you need data, output ONLY a JSON tool call — no preamble, no explanation, just the JSON:
