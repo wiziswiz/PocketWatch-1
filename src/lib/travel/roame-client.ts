@@ -161,7 +161,7 @@ export function roameFaresToUnified(fares: RoameFare[], searchClass: string): Un
       type: "award" as const,
       origin: fare.originIata,
       destination: fare.destinationIata,
-      airline: fare.operatingAirlines.map(c => AIRLINE_NAMES[c] || c).join(" / "),
+      airline: [...new Set(fare.operatingAirlines.map(c => AIRLINE_NAMES[c] || c))].join(" / "),
       operatingAirlines: fare.operatingAirlines,
       flightNumbers: fare.flightNumberOrder,
       stops: fare.numStops,
