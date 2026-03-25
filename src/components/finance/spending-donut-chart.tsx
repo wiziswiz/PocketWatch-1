@@ -149,7 +149,7 @@ export function SpendingDonutChart({ data, height = 250 }: SpendingDonutChartPro
         index: i,
       }
     })
-  }, [consolidatedData, total, palette])
+  }, [consolidatedData, total])
 
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGPathElement>, slice: ArcSlice) => {
     if (!svgRef.current) return
