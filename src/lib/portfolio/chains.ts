@@ -113,18 +113,6 @@ export const CHAIN_REGISTRY: Record<string, ChainMeta> = {
     isEvm: false,
     trustWalletName: "solana",
   },
-  // Alias — Helius/Zerion store chain as "SOLANA" in DB
-  SOLANA: {
-    id: "SOL",
-    name: "Solana",
-    symbol: "SOL",
-    color: "#14F195",
-    icon: "token",
-    chainPath: "sol",
-    explorerUrl: "https://solscan.io",
-    isEvm: false,
-    trustWalletName: "solana",
-  },
   BSC: {
     id: "BSC",
     name: "BSC",
@@ -226,7 +214,8 @@ for (const chain of SUPPORTED_CHAINS) {
 // Extra aliases for chain names stored in TransactionCache by Zerion/Alchemy
 // that don't match any CHAIN_REGISTRY key, name, or trustWalletName.
 const EXTRA_ALIASES: Record<string, string> = {
-  // Zerion stores these but registry keys differ
+  // Zerion/Helius store these but registry keys differ
+  SOLANA: "SOL",
   ETHEREUM: "ETH",
   ARBITRUM: "ARBITRUM_ONE",
   POLYGON: "POLYGON_POS",
