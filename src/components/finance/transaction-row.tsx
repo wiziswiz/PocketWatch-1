@@ -43,7 +43,8 @@ export function TransactionRow({
   const categoryBtnRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null)
-  const parsedDate = new Date(date)
+  // Parse as local time to avoid UTC off-by-one (Plaid dates are YYYY-MM-DD)
+  const parsedDate = date.includes("T") ? new Date(date) : new Date(date + "T00:00:00")
   const displayDate = parsedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })
   const fullDate = parsedDate.toLocaleDateString("en-US", {
     weekday: "long", month: "long", day: "numeric", year: "numeric",
@@ -86,13 +87,13 @@ export function TransactionRow({
         tabIndex={0}
         className={cn(
           "flex items-center gap-3 px-4 py-3 hover:bg-primary-subtle/30 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-inset",
-          isPending && "opacity-60",
+          isPending && "opacity-75",
         )}
         onClick={() => setExpanded(!expanded)}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(!expanded) } }}
         aria-expanded={expanded}
       >
-        <div className="w-16 text-xs text-foreground-muted font-data">{displayDate}</div>
+        <div className="w-16 text-xs text-foreground/70 font-data">{displayDate}</div>
         {logoUrl && (
           <MerchantLogo url={logoUrl} />
         )}
@@ -113,7 +114,7 @@ export function TransactionRow({
                 Review
               </a>
             )}
-            <span className="text-xs text-foreground-muted">{accountName}{accountMask ? ` ••${accountMask}` : ""}</span>
+            <span className="text-xs text-foreground/50">{accountName}{accountMask ? ` ••${accountMask}` : ""}</span>
           </div>
         </div>
         <AmountDisplay amount={amount} />
