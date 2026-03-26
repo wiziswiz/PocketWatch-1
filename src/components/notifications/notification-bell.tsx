@@ -30,14 +30,26 @@ function formatTimeAgo(iso: string): string {
 
 export const NotificationBell = memo(function NotificationBell() {
   const [open, setOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const { data: unread } = useUnreadCount()
   const { data: history } = useNotificationHistory({ limit: 20 })
   const markRead = useMarkRead()
   const markAllRead = useMarkAllRead()
 
+  useEffect(() => { setMounted(true) }, [])
+
   const count = unread?.count ?? 0
   const items = history?.items ?? []
+
+  // Suppress SSR to avoid hydration mismatch from async data
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center w-9 h-9 rounded-lg text-foreground-muted">
+        <span className="material-symbols-rounded text-lg">notifications</span>
+      </div>
+    )
+  }
 
   // Close on outside click
   useEffect(() => {
