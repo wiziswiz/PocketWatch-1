@@ -128,7 +128,7 @@ export default function FinanceBudgetsPage() {
         </button>
       </div>
 
-      {/* ─── Hero: Ring Chart + Budget Allocation ─── */}
+      {/* ─── Hero: Ring Chart + Key Stats ─── */}
       {isLoading ? (
         <FinanceCardSkeleton />
       ) : budgetCount > 0 ? (
@@ -139,30 +139,56 @@ export default function FinanceBudgetsPage() {
               <BudgetRingChart spent={totalSpent} limit={totalBudgeted} size={200} strokeWidth={16} />
             </div>
 
-            {/* Budget Allocation — shows WHERE you put the money (sorted by budget size, NOT by usage) */}
-            <div className="flex-1 w-full space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">Top Allocations</p>
-                <p className="text-[10px] text-foreground-muted">Budget vs Actual</p>
-              </div>
-              {topAllocations.map((b) => {
-                const meta = getCategoryMeta(b.category)
-                return (
-                  <div key={b.id} className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: meta.hex }} />
-                        <span className="text-xs font-medium text-foreground">{b.category}</span>
+            {/* Key Stats — different data than the breakdown below */}
+            <div className="flex-1 w-full space-y-5">
+              {/* Stacked allocation bar — shows WHERE the budget goes proportionally */}
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted mb-2">Budget Allocation</p>
+                <div className="flex h-3 rounded-full overflow-hidden bg-background-secondary">
+                  {topAllocations.map((b) => {
+                    const meta = getCategoryMeta(b.category)
+                    const widthPct = totalBudgeted > 0 ? (b.monthlyLimit / totalBudgeted) * 100 : 0
+                    return (
+                      <div
+                        key={b.id}
+                        className="h-full transition-all duration-500"
+                        style={{ width: `${widthPct}%`, backgroundColor: meta.hex, opacity: 0.8 }}
+                        title={`${b.category}: ${formatCurrency(b.monthlyLimit, "USD", 0)}`}
+                      />
+                    )
+                  })}
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                  {topAllocations.map((b) => {
+                    const meta = getCategoryMeta(b.category)
+                    return (
+                      <div key={b.id} className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: meta.hex }} />
+                        <span className="text-[10px] text-foreground-muted">{b.category}</span>
                       </div>
-                      <span className="text-[10px] tabular-nums text-foreground-muted">
-                        <span className={cn("font-semibold", b.percentUsed > 100 ? "text-error" : "text-foreground")}>{formatCurrency(b.spent, "USD", 0)}</span>
-                        {" / "}{formatCurrency(b.monthlyLimit, "USD", 0)}
-                      </span>
-                    </div>
-                    <BudgetProgressBar spent={b.spent} limit={b.monthlyLimit} />
-                  </div>
-                )
-              })}
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Quick stats grid */}
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">Budgeted</p>
+                  <p className="text-lg font-bold tabular-nums text-foreground">{formatCurrency(totalBudgeted, "USD", 0)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">Remaining</p>
+                  <p className={cn("text-lg font-bold tabular-nums", remaining >= 0 ? "text-success" : "text-error")}>
+                    {formatCurrency(remaining, "USD", 0)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">Daily Avg</p>
+                  <p className="text-lg font-bold tabular-nums text-foreground">{formatCurrency(dailyAvg, "USD", 0)}</p>
+                  <p className="text-[10px] text-foreground-muted">{dayOfMonth}d tracked</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
