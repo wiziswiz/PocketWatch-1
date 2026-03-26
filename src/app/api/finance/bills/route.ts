@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { currentMonthStr, type BillItem } from "@/lib/finance/bill-helpers"
 import { projectSubBill, projectPlaidBill, getCCBills } from "@/lib/finance/bill-projections"
 import { lookupMerchantLogos } from "@/lib/finance/merchant-logos"
+import { refreshSubscriptionDates } from "@/lib/finance/subscription-refresh"
 import { NextResponse, type NextRequest } from "next/server"
 
 export async function GET(req: NextRequest) {
@@ -20,6 +21,9 @@ export async function GET(req: NextRequest) {
     const [, targetMon] = targetMonth.split("-").map(Number)
     const [targetYear] = targetMonth.split("-").map(Number)
     const monthEnd = new Date(targetYear, targetMon, 0, 23, 59, 59)
+
+    // Refresh stale subscription dates from transaction history (cached, runs at most every 5min)
+    await refreshSubscriptionDates(user.id)
 
     const [subscriptions, plaidStreams, dismissedSubs] = await Promise.all([
       db.financeSubscription.findMany({
