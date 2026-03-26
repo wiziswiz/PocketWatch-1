@@ -70,9 +70,9 @@
   /* Backgrounds */
   --background: #FAFAFA;
   --background-secondary: #F0F0F2;
-  --foreground: #111113;
-  --foreground-muted: #6B6B70;
-  --foreground-secondary: #86868B;
+  --foreground: #0A0A0C;
+  --foreground-muted: #4A4A4F;
+  --foreground-secondary: #636369;
 
   /* Primary — Apple Blue */
   --primary: #007AFF;
