@@ -277,7 +277,7 @@ export default function FinanceTransactionsPage() {
       ) : data?.transactions.length ? (
         <div className="bg-card border border-card-border rounded-xl overflow-hidden">
           {/* Elevated Header */}
-          <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 border-b border-card-border bg-card-elevated text-[10px] text-foreground/50 font-semibold uppercase tracking-widest">
+          <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 border-b border-card-border bg-card-elevated text-[10px] text-foreground-muted font-semibold uppercase tracking-widest">
             <div className="w-10 sm:w-16">Date</div>
             <div className="flex-1">Description</div>
             <div className="w-28 hidden md:block">Category</div>
