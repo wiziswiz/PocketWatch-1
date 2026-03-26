@@ -30,6 +30,9 @@ export default function FinanceCardsPage() {
   const { data: institutions } = useFinanceAccounts()
   const { data: strategy } = useCardStrategy()
   const { data: billsData } = useUpcomingBills()
+  // Also fetch next month for "upcoming" count — current month may have all-paid
+  const nextMonth = (() => { const d = new Date(); d.setMonth(d.getMonth() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` })()
+  const { data: nextMonthBills } = useUpcomingBills(nextMonth)
   const { data: subs } = useFinanceSubscriptions()
   const saveCreditCard = useSaveCreditCard()
   const togglePerk = useToggleCardPerk()
@@ -179,8 +182,13 @@ export default function FinanceCardsPage() {
     }, 0)
 
   const allBills = billsData?.bills ?? []
-  const upcomingBills = allBills.filter((b) => !b.isPaid)
+  const thisMonthUpcoming = allBills.filter((b) => !b.isPaid)
   const paidBills = allBills.filter((b) => b.isPaid)
+  // If current month has no upcoming, show next month's upcoming bills
+  const nextMonthUpcoming = thisMonthUpcoming.length === 0
+    ? (nextMonthBills?.bills ?? []).filter((b) => !b.isPaid)
+    : []
+  const upcomingBills = thisMonthUpcoming.length > 0 ? thisMonthUpcoming : nextMonthUpcoming
   const upcomingCount = upcomingBills.length
   const upcomingTotal = upcomingBills.reduce((s, b) => s + b.amount, 0)
   const nextDue = upcomingBills[0]
