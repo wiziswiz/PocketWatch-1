@@ -39,18 +39,6 @@ export const NotificationBell = memo(function NotificationBell() {
 
   useEffect(() => { setMounted(true) }, [])
 
-  const count = unread?.count ?? 0
-  const items = history?.items ?? []
-
-  // Suppress SSR to avoid hydration mismatch from async data
-  if (!mounted) {
-    return (
-      <div className="flex items-center justify-center w-9 h-9 rounded-lg text-foreground-muted">
-        <span className="material-symbols-rounded text-lg">notifications</span>
-      </div>
-    )
-  }
-
   // Close on outside click
   useEffect(() => {
     if (!open) return
@@ -70,6 +58,18 @@ export const NotificationBell = memo(function NotificationBell() {
     document.addEventListener("keydown", handler)
     return () => document.removeEventListener("keydown", handler)
   }, [open])
+
+  const count = unread?.count ?? 0
+  const items = history?.items ?? []
+
+  // Suppress SSR to avoid hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center w-9 h-9 rounded-lg text-foreground-muted">
+        <span className="material-symbols-rounded text-lg">notifications</span>
+      </div>
+    )
+  }
 
   return (
     <div className="relative" ref={panelRef}>
