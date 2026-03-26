@@ -12,8 +12,8 @@ import { BudgetCategoryBreakdown } from "@/components/finance/budgets/budget-cat
 import { BudgetAddModal } from "@/components/finance/budgets/budget-add-modal"
 import { BudgetUntrackedSection } from "@/components/finance/budgets/budget-untracked-section"
 import { BudgetRingChart } from "@/components/finance/budgets/budget-ring-chart"
-import { ConfirmDialog } from "@/components/finance/confirm-dialog"
 import { BudgetProgressBar } from "@/components/finance/budget-progress-bar"
+import { ConfirmDialog } from "@/components/finance/confirm-dialog"
 import { getCategoryMeta, getBudgetableCategories } from "@/lib/finance/categories"
 import { formatCurrency, cn } from "@/lib/utils"
 
@@ -39,9 +39,15 @@ export default function FinanceBudgetsPage() {
   const percentUsed = totalBudgeted > 0 ? Math.round((totalSpent / totalBudgeted) * 100) : 0
   const budgetCount = budgets?.length ?? 0
   const overBudgetCount = budgets?.filter((b) => b.percentUsed > 100).length ?? 0
+  const isOverBudget = percentUsed > 100
 
   const sortedBudgets = useMemo(
     () => [...(budgets ?? [])].sort((a, b) => b.percentUsed - a.percentUsed),
+    [budgets]
+  )
+  // Top allocations sorted by budget size (shows WHERE you put the money)
+  const topAllocations = useMemo(
+    () => [...(budgets ?? [])].sort((a, b) => b.monthlyLimit - a.monthlyLimit).slice(0, 5),
     [budgets]
   )
 
@@ -70,6 +76,13 @@ export default function FinanceBudgetsPage() {
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
   const dayOfMonth = now.getDate()
   const dailyAvg = dayOfMonth > 0 ? totalSpent / dayOfMonth : 0
+  const projectedTotal = Math.round(dailyAvg * daysInMonth)
+  const projectedOver = projectedTotal - totalBudgeted
+
+  // Insights data
+  const worstCategory = sortedBudgets[0]
+  const worstOver = worstCategory ? worstCategory.spent - worstCategory.monthlyLimit : 0
+  const underBudget = sortedBudgets.filter((b) => b.percentUsed < 100)
 
   const deletingBudget = budgets?.find((b) => b.id === deletingId)
 
@@ -101,8 +114,10 @@ export default function FinanceBudgetsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Budgets</h1>
-          <p className="text-sm text-foreground-muted mt-0.5">{currentMonth}</p>
+          <h1 className="text-xl font-semibold text-foreground">Budgets / {currentMonth}</h1>
+          <p className={cn("text-xs font-medium mt-0.5", isOverBudget ? "text-error" : "text-success")}>
+            Status: {isOverBudget ? "Over Budget" : "On Track"}
+          </p>
         </div>
         <button
           onClick={() => setShowModal(true)}
@@ -113,43 +128,38 @@ export default function FinanceBudgetsPage() {
         </button>
       </div>
 
-      {/* Hero Section: Ring Chart + Top Categories */}
+      {/* ─── Hero: Ring Chart + Budget Allocation ─── */}
       {isLoading ? (
         <FinanceCardSkeleton />
       ) : budgetCount > 0 ? (
         <div className="bg-card rounded-2xl p-6" style={{ boxShadow: "var(--shadow-sm)" }}>
-          <div className="flex flex-col sm:flex-row items-center gap-8">
+          <div className="flex flex-col md:flex-row items-center gap-8">
             {/* Ring Chart */}
             <div className="flex-shrink-0">
-              <BudgetRingChart spent={totalSpent} limit={totalBudgeted} />
+              <BudgetRingChart spent={totalSpent} limit={totalBudgeted} size={200} strokeWidth={16} />
             </div>
 
-            {/* Top Categories Mini Bars */}
+            {/* Budget Allocation — shows WHERE you put the money (sorted by budget size, NOT by usage) */}
             <div className="flex-1 w-full space-y-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">
-                Highest Usage Categories
-              </p>
-              {sortedBudgets.slice(0, 5).map((b) => {
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">Top Allocations</p>
+                <p className="text-[10px] text-foreground-muted">Budget vs Actual</p>
+              </div>
+              {topAllocations.map((b) => {
                 const meta = getCategoryMeta(b.category)
-                const isOver = b.percentUsed > 100
-                const isWarn = b.percentUsed >= 80 && !isOver
                 return (
-                  <div key={b.id} className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: meta.hex }} />
-                    <span className="text-xs font-medium text-foreground w-28 truncate">{b.category}</span>
-                    <div className="flex-1">
-                      <BudgetProgressBar spent={b.spent} limit={b.monthlyLimit} />
+                  <div key={b.id} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: meta.hex }} />
+                        <span className="text-xs font-medium text-foreground">{b.category}</span>
+                      </div>
+                      <span className="text-[10px] tabular-nums text-foreground-muted">
+                        <span className={cn("font-semibold", b.percentUsed > 100 ? "text-error" : "text-foreground")}>{formatCurrency(b.spent, "USD", 0)}</span>
+                        {" / "}{formatCurrency(b.monthlyLimit, "USD", 0)}
+                      </span>
                     </div>
-                    <span className="text-[10px] tabular-nums text-foreground-muted flex-shrink-0 w-24 text-right">
-                      <span className="font-semibold text-foreground">{formatCurrency(b.spent, "USD", 0)}</span>
-                      <span className="text-foreground-muted"> / {formatCurrency(b.monthlyLimit, "USD", 0)}</span>
-                    </span>
-                    <span className={cn(
-                      "text-[10px] font-bold tabular-nums w-10 text-right flex-shrink-0",
-                      isOver ? "text-error" : isWarn ? "text-amber-500" : "text-success"
-                    )}>
-                      {Math.round(b.percentUsed)}%
-                    </span>
+                    <BudgetProgressBar spent={b.spent} limit={b.monthlyLimit} />
                   </div>
                 )
               })}
@@ -158,46 +168,78 @@ export default function FinanceBudgetsPage() {
         </div>
       ) : null}
 
-      {/* Stat Cards */}
+      {/* ─── Insight Cards — each tells a different story ─── */}
       {budgetCount > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Pace Check */}
           <div className="bg-card rounded-xl p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted mb-2">Monthly Spend</p>
-            <p className={cn("text-2xl font-bold tabular-nums tracking-tight", percentUsed > 100 ? "text-error" : "text-foreground")}>
-              {formatCurrency(totalSpent, "USD", 0)}
-            </p>
-            <p className="text-xs text-foreground-muted mt-1">
-              {remaining >= 0 ? `${formatCurrency(remaining, "USD", 0)} remaining` : `${formatCurrency(Math.abs(remaining), "USD", 0)} over budget`}
-            </p>
-          </div>
-          <div className="bg-card rounded-xl p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted mb-2">Daily Average</p>
-            <p className="text-2xl font-bold tabular-nums tracking-tight text-foreground">
-              {formatCurrency(dailyAvg, "USD", 0)}
-            </p>
-            <p className="text-xs text-foreground-muted mt-1">{dayOfMonth} days tracked</p>
-          </div>
-          <div className="bg-card rounded-xl p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted mb-2">Categories Over</p>
-            <div className="flex items-baseline gap-2">
-              <p className="text-2xl font-bold tabular-nums tracking-tight text-foreground">
-                {overBudgetCount} <span className="text-sm font-medium text-foreground-muted">of {budgetCount}</span>
-              </p>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="material-symbols-rounded text-primary" style={{ fontSize: 16 }}>speed</span>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">Pace Check</p>
             </div>
-            <div className="flex items-center gap-1.5 mt-2">
-              {sortedBudgets.map((b) => (
+            <p className="text-xs text-foreground leading-relaxed">
+              You&apos;re spending <span className="font-bold tabular-nums">{formatCurrency(dailyAvg, "USD", 0)}/day</span>.
+              At this pace you&apos;ll hit <span className="font-bold tabular-nums">{formatCurrency(projectedTotal, "USD", 0)}</span> by month end
+              {projectedOver > 0 ? (
+                <span className="text-error font-semibold"> — {formatCurrency(projectedOver, "USD", 0)} over budget.</span>
+              ) : (
+                <span className="text-success font-semibold"> — {formatCurrency(Math.abs(projectedOver), "USD", 0)} under budget.</span>
+              )}
+            </p>
+            {/* Pace indicator */}
+            <div className="mt-3 relative">
+              <div className="h-1.5 bg-background-secondary rounded-full">
                 <div
-                  key={b.id}
-                  className={cn("h-2 flex-1 rounded-full", b.percentUsed > 100 ? "bg-error" : b.percentUsed > 80 ? "bg-amber-500" : "bg-success")}
-                  title={`${b.category}: ${Math.round(b.percentUsed)}%`}
+                  className={cn("h-full rounded-full transition-all", projectedOver > 0 ? "bg-error" : "bg-success")}
+                  style={{ width: `${Math.min((dayOfMonth / daysInMonth) * 100, 100)}%` }}
                 />
-              ))}
+              </div>
+              <div className="flex justify-between text-[9px] text-foreground-muted mt-1 tabular-nums">
+                <span>Day 1</span>
+                <span>Day {daysInMonth}</span>
+              </div>
             </div>
+          </div>
+
+          {/* Biggest Overspend */}
+          <div className="bg-card rounded-xl p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="material-symbols-rounded text-error" style={{ fontSize: 16 }}>warning</span>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">Biggest Overspend</p>
+            </div>
+            {worstCategory && worstOver > 0 ? (
+              <p className="text-xs text-foreground leading-relaxed">
+                <span className="font-bold">{worstCategory.category}</span> is{" "}
+                <span className="text-error font-bold tabular-nums">{formatCurrency(worstOver, "USD", 0)} over budget</span>{" "}
+                ({Math.round(worstCategory.percentUsed)}%).
+                {daysInMonth - dayOfMonth > 0 && (
+                  <span className="text-foreground-muted"> Consider reducing by {formatCurrency(worstOver / (daysInMonth - dayOfMonth) * 7, "USD", 0)}/week.</span>
+                )}
+              </p>
+            ) : (
+              <p className="text-xs text-success font-medium">All categories are within budget!</p>
+            )}
+          </div>
+
+          {/* On Track */}
+          <div className="bg-card rounded-xl p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="material-symbols-rounded text-success" style={{ fontSize: 16 }}>check_circle</span>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">On Track</p>
+            </div>
+            {underBudget.length > 0 ? (
+              <p className="text-xs text-foreground leading-relaxed">
+                <span className="font-bold text-success">{underBudget.length} {underBudget.length === 1 ? "category is" : "categories are"}</span> under budget:
+                {" "}{underBudget.slice(0, 2).map((b) => `${b.category} (${formatCurrency(b.monthlyLimit - b.spent, "USD", 0)} left)`).join(" and ")}.
+              </p>
+            ) : (
+              <p className="text-xs text-error font-medium">All categories are over budget.</p>
+            )}
           </div>
         </div>
       )}
 
-      {/* Empty State */}
+      {/* ─── Empty State ─── */}
       {!isLoading && budgetCount === 0 && (
         <div className="bg-card rounded-2xl p-12 text-center" style={{ boxShadow: "var(--shadow-sm)" }}>
           <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
@@ -205,18 +247,15 @@ export default function FinanceBudgetsPage() {
           </div>
           <h3 className="text-base font-semibold text-foreground mb-1.5">No budgets yet</h3>
           <p className="text-sm text-foreground-muted mb-4 max-w-sm mx-auto">
-            Set spending limits by category to track your budget and control your spending.
+            Set spending limits by category to track and control your spending.
           </p>
-          <button
-            onClick={() => setShowModal(true)}
-            className="px-5 py-2.5 bg-foreground text-background rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity"
-          >
+          <button onClick={() => setShowModal(true)} className="px-5 py-2.5 bg-foreground text-background rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity">
             Create Your First Budget
           </button>
         </div>
       )}
 
-      {/* Detailed Budget List */}
+      {/* ─── Detailed Budget List ─── */}
       {budgetCount > 0 && (
         <BudgetCategoryBreakdown
           budgets={budgets!}
@@ -228,17 +267,13 @@ export default function FinanceBudgetsPage() {
         />
       )}
 
-      {/* Untracked Spending */}
+      {/* ─── Untracked Spending ─── */}
       {budgetCount > 0 && untrackedCategories.length > 0 && (
         <BudgetUntrackedSection
           untrackedCategories={untrackedCategories}
           txByCategory={txByCategory}
           onAddBudget={(cat, limit) => createBudget.mutate({ category: cat, monthlyLimit: limit })}
-          onBudgetAll={() => {
-            for (const cat of untrackedCategories) {
-              createBudget.mutate({ category: cat.category, monthlyLimit: cat.suggested })
-            }
-          }}
+          onBudgetAll={() => { for (const cat of untrackedCategories) createBudget.mutate({ category: cat.category, monthlyLimit: cat.suggested }) }}
         />
       )}
 
@@ -262,7 +297,7 @@ export default function FinanceBudgetsPage() {
         onClose={() => setDeletingId(null)}
         onConfirm={() => { if (deletingId) deleteBudget.mutate(deletingId, { onSuccess: () => setDeletingId(null) }) }}
         title={`Delete ${deletingBudget?.category ?? ""} budget?`}
-        description="This will permanently delete this budget. Your transaction data is not affected."
+        description="This will permanently delete this budget."
         confirmLabel="Delete"
         variant="danger"
         isLoading={deleteBudget.isPending}
