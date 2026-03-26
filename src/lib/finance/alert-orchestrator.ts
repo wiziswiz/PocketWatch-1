@@ -40,7 +40,7 @@ export async function detectAndNotify(userId: string): Promise<{ alertsSent: num
     const sentChannels = results.filter((r) => r.sent).map((r) => r.channel)
 
     // Also persist to FinanceAlert for backward compat with existing UI
-    if (results.length > 0) {
+    if (sentChannels.length > 0) {
       await db.financeAlert.create({
         data: {
           userId,

@@ -217,7 +217,7 @@ export async function computeDeepInsights(userId: string): Promise<DeepInsightsR
     .map(([name, data]) => ({ name, count: data.count, total: round(data.total), category: data.category, logoUrl: data.logoUrl }))
 
   // Largest purchases — only real spending, not transfers
-  const largestPurchases = realSpendTxs.sort((a, b) => b.amount - a.amount).slice(0, 5)
+  const largestPurchases = [...realSpendTxs].sort((a, b) => b.amount - a.amount).slice(0, 5)
     .map((tx) => ({ id: tx.id, name: tx.merchantName ?? tx.name, amount: round(tx.amount), date: tx.date.toISOString().slice(0, 10), category: tx.category, logoUrl: tx.logoUrl }))
 
   const uncategorizedPreview = uncategorizedPreviewRaw.map((t) => ({
