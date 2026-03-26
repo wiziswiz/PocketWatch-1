@@ -101,10 +101,10 @@ export default function FinanceTransactionsPage() {
 
       {/* Categorization Alert — shows for uncategorized OR needs-review */}
       {needsAttention > 0 && (
-        <div className="bg-amber-500/15 border-2 border-amber-500/40 rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-card border border-card-border rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-amber-500/25 flex items-center justify-center">
-              <span className="material-symbols-rounded text-amber-400" style={{ fontSize: 20 }}>label_off</span>
+            <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+              <span className="material-symbols-rounded text-orange-500" style={{ fontSize: 20 }}>label_off</span>
             </div>
             <div>
               <p className="text-sm font-bold text-foreground">
@@ -112,7 +112,7 @@ export default function FinanceTransactionsPage() {
                 {uncategorizedCount > 0 && reviewCount > 0 && " + "}
                 {reviewCount > 0 && `${reviewCount} need review`}
               </p>
-              <p className="text-xs text-foreground-muted/80">Categorize for better insights</p>
+              <p className="text-xs text-foreground-muted">Categorize for better insights</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -134,12 +134,12 @@ export default function FinanceTransactionsPage() {
                 }
               }}
               disabled={autoCategorize.isPending}
-              className="px-3 py-2 text-xs border border-amber-500/40 bg-amber-500/10 rounded-lg hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+              className="px-3 py-2 text-xs border border-card-border rounded-lg hover:bg-background-secondary transition-colors disabled:opacity-50"
             >
-              <span className="font-semibold text-amber-400">
+              <span className="font-semibold text-foreground">
                 {autoCategorize.isPending ? "Working..." : "Quick Fix"}
               </span>
-              <span className="block text-[10px] text-amber-400/70 mt-0.5">Local rules — instant</span>
+              <span className="block text-[10px] text-foreground-muted mt-0.5">Local rules — instant</span>
             </button>
             <Link
               href="/finance/categorize"
@@ -150,13 +150,13 @@ export default function FinanceTransactionsPage() {
             </Link>
             <Link
               href="/finance/categorize?mode=rebuild"
-              className="px-3 py-2 text-xs border border-primary/40 bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors text-center flex flex-col items-center"
+              className="px-3 py-2 text-xs bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity text-center flex flex-col items-center"
             >
-              <span className="font-semibold text-primary flex items-center gap-1">
+              <span className="font-semibold flex items-center gap-1">
                 <span className="material-symbols-rounded" style={{ fontSize: 13 }}>auto_awesome</span>
                 AI Categorize All
               </span>
-              <span className="block text-[10px] text-primary/70 mt-0.5">Uses AI — reviews all at once</span>
+              <span className="block text-[10px] opacity-60 mt-0.5">Uses AI — reviews all at once</span>
             </Link>
           </div>
         </div>
