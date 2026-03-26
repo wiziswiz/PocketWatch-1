@@ -36,12 +36,16 @@ export function SpendingMonthCard() {
   }
   const goToLatest = () => setSelectedMonth(undefined)
 
+  // Exclude non-spending categories from the donut chart
+  const NON_SPENDING = new Set(["Investment", "Transfer", "Income", "Crypto"])
   const donutData = useMemo(
     () =>
-      (data?.categories ?? []).map((c) => ({
-        category: c.category,
-        amount: c.total,
-      })),
+      (data?.categories ?? [])
+        .filter((c) => !NON_SPENDING.has(c.category))
+        .map((c) => ({
+          category: c.category,
+          amount: c.total,
+        })),
     [data?.categories]
   )
 

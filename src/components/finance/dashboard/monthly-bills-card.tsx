@@ -106,13 +106,13 @@ export function MonthlyBillsCard({ isHidden }: MonthlyBillsCardProps) {
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{bill.merchantName}</p>
                           <p className="text-[10px] text-foreground-muted">
-                            {bill.daysUntil === 0 ? "Due today" : bill.daysUntil === 1 ? "Tomorrow" : `In ${bill.daysUntil} days`}
+                            {bill.daysUntil < 0 ? `${Math.abs(bill.daysUntil)}d overdue` : bill.daysUntil === 0 ? "Due today" : bill.daysUntil === 1 ? "Tomorrow" : `In ${bill.daysUntil} days`}
                           </p>
                         </div>
                       </div>
                       <span className={cn(
                         "font-data text-sm font-semibold tabular-nums flex-shrink-0 ml-2",
-                        bill.daysUntil <= 1 ? "text-warning animate-gentle-pulse" : "text-foreground"
+                        bill.daysUntil < 0 ? "text-error" : bill.daysUntil <= 1 ? "text-warning animate-gentle-pulse" : "text-foreground"
                       )}>
                         <BlurredValue isHidden={isHidden}>{formatCurrency(bill.amount)}</BlurredValue>
                       </span>
