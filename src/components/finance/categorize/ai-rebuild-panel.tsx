@@ -163,7 +163,15 @@ export function AIRebuildPanel({ uncategorizedCount }: AIRebuildPanelProps) {
             <StatBox label="Custom Categories" value={s.customCategoriesCreated} />
           </div>
           {s.batchesFailed > 0 && (
-            <p className="text-xs text-amber-500">{s.batchesFailed} batch{s.batchesFailed > 1 ? "es" : ""} failed — partial results applied.</p>
+            <div className="flex items-center justify-between bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+              <span className="text-xs text-amber-500">{s.batchesFailed} batch{s.batchesFailed > 1 ? "es" : ""} failed after retries — partial results applied.</span>
+              <button
+                onClick={() => { reset(); start("uncategorized") }}
+                className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors flex-shrink-0 ml-3"
+              >
+                Retry failed
+              </button>
+            </div>
           )}
           {reviewCount > 0 && (
             <div className="flex items-center justify-between bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">

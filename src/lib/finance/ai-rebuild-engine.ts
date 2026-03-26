@@ -118,33 +118,43 @@ export async function runRebuildBatches(
     const batch = merchants.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE)
     send("progress", { batchIndex: i, totalBatches, merchantsProcessed: i * BATCH_SIZE, totalMerchants: merchants.length, message: `Processing batch ${i + 1}/${totalBatches}` })
 
-    try {
-      const prompt = buildRebuildPrompt(batch, customCategories.map((c) => c.label), existingRules, mode)
-      const rawResponse = await callAIProviderRaw(providerConfig, prompt)
-      const results = parseRebuildResponse(rawResponse)
+    let succeeded = false
+    for (let attempt = 0; attempt < 3 && !succeeded; attempt++) {
+      try {
+        if (attempt > 0) {
+          const delayMs = 2000 * attempt
+          send("progress", { batchIndex: i, totalBatches, merchantsProcessed: i * BATCH_SIZE, totalMerchants: merchants.length, message: `Retrying batch ${i + 1} (attempt ${attempt + 1})...` })
+          await new Promise((r) => setTimeout(r, delayMs))
+        }
 
-      const batchResults = await persistBatchResults(userId, results, txsByMerchant, validCategories, customBudget)
+        const prompt = buildRebuildPrompt(batch, customCategories.map((c) => c.label), existingRules, mode)
+        const rawResponse = await callAIProviderRaw(providerConfig, prompt)
+        const results = parseRebuildResponse(rawResponse)
 
-      totalTxCategorized += batchResults.txCategorized
-      rulesCreated += batchResults.rulesCreated
-      rulesUpdated += batchResults.rulesUpdated
-      customCategoriesCreated += batchResults.newCustomCategories.length
-      // Decrement budget AFTER transaction committed successfully
-      customBudget.remaining -= batchResults.newCustomCategories.length
-      batchesCompleted++
+        const batchResults = await persistBatchResults(userId, results, txsByMerchant, validCategories, customBudget)
 
-      // Add new custom categories to valid set
-      for (const label of batchResults.newCustomCategories) {
-        validCategories.add(label)
+        totalTxCategorized += batchResults.txCategorized
+        rulesCreated += batchResults.rulesCreated
+        rulesUpdated += batchResults.rulesUpdated
+        customCategoriesCreated += batchResults.newCustomCategories.length
+        customBudget.remaining -= batchResults.newCustomCategories.length
+        batchesCompleted++
+
+        for (const label of batchResults.newCustomCategories) {
+          validCategories.add(label)
+        }
+
+        send("batch_complete", {
+          batchIndex: i,
+          results: batchResults.processedMerchants,
+        })
+        succeeded = true
+      } catch (err) {
+        if (attempt === 2) {
+          batchesFailed++
+          send("error", { batchIndex: i, message: err instanceof Error ? err.message : "Batch failed after 3 attempts" })
+        }
       }
-
-      send("batch_complete", {
-        batchIndex: i,
-        results: batchResults.processedMerchants,
-      })
-    } catch (err) {
-      batchesFailed++
-      send("error", { batchIndex: i, message: err instanceof Error ? err.message : "Batch failed" })
     }
   }
 
