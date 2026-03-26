@@ -83,7 +83,7 @@ export const NotificationBell = memo(function NotificationBell() {
 
       {/* Dropdown Panel */}
       {open && (
-        <div className="absolute bottom-full mb-2 right-0 w-[360px] max-h-[480px] bg-card border border-card-border rounded-xl shadow-lg overflow-hidden flex flex-col z-50 animate-in fade-in slide-in-from-bottom-2 duration-150">
+        <div className="absolute bottom-full mb-2 left-0 w-[320px] sm:w-[360px] max-h-[min(480px,70vh)] bg-card border border-card-border rounded-xl shadow-lg overflow-hidden flex flex-col z-50 animate-in fade-in slide-in-from-bottom-2 duration-150">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-card-border">
             <h3 className="text-sm font-semibold text-foreground">

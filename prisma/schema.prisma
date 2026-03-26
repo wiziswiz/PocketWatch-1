@@ -531,7 +531,7 @@ model CapitalFlow {
 
 /// Global application settings (not user-scoped). Do not use for per-user config.
 model Settings {
-  id    String @id @default("default")
+  id    String @id @default(cuid())
   key   String @unique
   value Json
 
