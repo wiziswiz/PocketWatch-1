@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
     const monthStart = new Date(year, month - 1, 1)
     const monthEnd = new Date(year, month, 1) // exclusive
 
+    // Exclude Transfer/Income/Investment/Crypto from spending (these are not real spending)
     const spending = await db.financeTransaction.groupBy({
       by: ["category"],
       where: {
@@ -65,6 +66,7 @@ export async function GET(request: NextRequest) {
         amount: { gt: 0 },
         isExcluded: false,
         isDuplicate: false,
+        category: { notIn: ["Transfer", "Income", "Investment", "Crypto"] },
       },
       _sum: { amount: true },
     })

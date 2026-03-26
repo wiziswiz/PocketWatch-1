@@ -15,6 +15,7 @@ export function formatCurrency(
   decimals = 2
 ): string {
   const num = typeof amount === "string" ? parseFloat(amount) : amount
+  if (!isFinite(num)) return "$0.00"
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,

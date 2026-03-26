@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/lib/auth"
 import { apiError } from "@/lib/api-error"
+import { invalidateCache } from "@/lib/cache"
 import { db } from "@/lib/db"
 import { cleanMerchantName, computeNewConfidence, CONFIDENCE, CATEGORIES } from "@/lib/finance/categorize"
 import { NextRequest, NextResponse } from "next/server"
@@ -141,6 +142,12 @@ export async function POST(req: NextRequest) {
         }
       }
     })
+
+    // Invalidate server caches so spending/income/trends refresh
+    invalidateCache(`deep-insights:${user.id}`)
+    invalidateCache(`finance-insights:${user.id}`)
+    invalidateCache(`finance-spending-by-month:${user.id}`)
+    invalidateCache(`finance-trends:${user.id}`)
 
     return NextResponse.json({ action: "changed", category })
   } catch (err) {

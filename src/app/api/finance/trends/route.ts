@@ -76,16 +76,23 @@ export async function GET(req: NextRequest) {
       monthMap.set(ms, { income: 0, spending: 0, categories: new Map() })
     }
 
+    const NON_SPENDING = new Set(["Transfer", "Income", "Investment", "Crypto"])
     for (const tx of transactions) {
       const monthKey = tx.date.toISOString().slice(0, 7)
       const bucket = monthMap.get(monthKey)
       if (!bucket) continue
 
       if (tx.amount < 0) {
-        bucket.income += Math.abs(tx.amount)
+        // Only count actual income, not refunds/transfer credits
+        const cat = (tx.category ?? "").toLowerCase()
+        if (cat === "income") {
+          bucket.income += Math.abs(tx.amount)
+        }
       } else {
-        bucket.spending += tx.amount
+        // Exclude transfers/income/investment from spending
         const cat = tx.category ?? "Uncategorized"
+        if (NON_SPENDING.has(cat)) continue
+        bucket.spending += tx.amount
         bucket.categories.set(cat, (bucket.categories.get(cat) ?? 0) + tx.amount)
       }
     }

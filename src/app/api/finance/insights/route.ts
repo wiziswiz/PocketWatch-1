@@ -64,13 +64,14 @@ export async function GET() {
             _sum: { amount: true },
           })
         : Promise.resolve([]),
+      // Only count "Income" category as income (not refunds, transfer credits, etc.)
       db.financeTransaction.aggregate({
-        where: { ...baseWhere, date: { gte: thisMonthStart, lt: thisMonthEnd }, amount: { lt: 0 } },
+        where: { ...baseWhere, date: { gte: thisMonthStart, lt: thisMonthEnd }, amount: { lt: 0 }, category: "Income" },
         _sum: { amount: true },
       }),
       lastMonthStart && lastMonthEnd
         ? db.financeTransaction.aggregate({
-            where: { ...baseWhere, date: { gte: lastMonthStart, lt: lastMonthEnd }, amount: { lt: 0 } },
+            where: { ...baseWhere, date: { gte: lastMonthStart, lt: lastMonthEnd }, amount: { lt: 0 }, category: "Income" },
             _sum: { amount: true },
           })
         : Promise.resolve({ _sum: { amount: null } }),

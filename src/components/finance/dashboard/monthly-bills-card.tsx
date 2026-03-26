@@ -56,7 +56,7 @@ export function MonthlyBillsCard({ isHidden }: MonthlyBillsCardProps) {
       <div className="flex items-center justify-between px-5 py-3 border-b border-card-border/30">
         <div className="flex items-center gap-2">
           <span className="material-symbols-rounded text-foreground-muted" style={{ fontSize: 18 }}>receipt_long</span>
-          <span className="text-[10px] font-medium uppercase tracking-widest text-foreground-muted">This Month&apos;s Bills</span>
+          <span className="text-[10px] font-medium uppercase tracking-widest text-foreground-muted">{formatMonthLabel(month)} Bills</span>
         </div>
         <span className="font-data text-xs font-medium bg-warning/10 text-warning px-2 py-0.5 rounded-full tabular-nums">
           <BlurredValue isHidden={isHidden}>{formatCurrency(monthTotal)}</BlurredValue>
@@ -106,13 +106,13 @@ export function MonthlyBillsCard({ isHidden }: MonthlyBillsCardProps) {
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{bill.merchantName}</p>
                           <p className="text-[10px] text-foreground-muted">
-                            {bill.daysUntil < 0 ? `${Math.abs(bill.daysUntil)}d overdue` : bill.daysUntil === 0 ? "Due today" : bill.daysUntil === 1 ? "Tomorrow" : `In ${bill.daysUntil} days`}
+                            {bill.isPaid ? "Paid" : bill.daysUntil === 0 ? "Due today" : bill.daysUntil === 1 ? "Tomorrow" : `In ${bill.daysUntil} days`}
                           </p>
                         </div>
                       </div>
                       <span className={cn(
                         "font-data text-sm font-semibold tabular-nums flex-shrink-0 ml-2",
-                        bill.daysUntil < 0 ? "text-error" : bill.daysUntil <= 1 ? "text-warning animate-gentle-pulse" : "text-foreground"
+                        bill.isPaid ? "text-success" : bill.daysUntil <= 1 ? "text-warning animate-gentle-pulse" : "text-foreground"
                       )}>
                         <BlurredValue isHidden={isHidden}>{formatCurrency(bill.amount)}</BlurredValue>
                       </span>

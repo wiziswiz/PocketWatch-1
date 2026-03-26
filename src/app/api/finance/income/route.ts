@@ -21,6 +21,7 @@ export async function GET() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
 
+  // Only count "Income" category (salary, dividends, etc.) — not refunds or transfer credits
   const result = await db.financeTransaction.aggregate({
     where: {
       userId: user.id,
@@ -28,6 +29,7 @@ export async function GET() {
       amount: { lt: 0 },
       isDuplicate: false,
       isExcluded: false,
+      category: "Income",
     },
     _sum: { amount: true },
   })

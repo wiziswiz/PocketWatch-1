@@ -111,7 +111,8 @@ export async function computeDeepInsights(userId: string): Promise<DeepInsightsR
 
   const realSpendTxs = txs.filter(isRealSpend)
   const spending = realSpendTxs.reduce((s, t) => s + t.amount, 0)
-  const income = txs.filter((t) => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0)
+  // Only count "Income" category as income (not refunds, transfer credits, etc.)
+  const income = txs.filter((t) => t.amount < 0 && (t.category ?? "").toLowerCase() === "income").reduce((s, t) => s + Math.abs(t.amount), 0)
 
   // Use median daily spend for burn rate (resistant to outlier days like a $3K one-off)
   const dailyTotals = new Map<string, number>()
