@@ -152,3 +152,126 @@ export async function getFlightResults(userId: string, input: ToolInput): Promis
     })),
   })
 }
+
+/**
+ * Generate a price match / negotiation email based on flight search results.
+ * Finds the cheapest option and drafts a persuasive email to competing airlines.
+ */
+export async function generatePriceMatchEmail(userId: string, input: ToolInput): Promise<string> {
+  const data = await loadFlightResults(userId)
+  if (!data) return NO_FLIGHTS
+
+  const targetAirline = (input.airline as string)?.toLowerCase() || ""
+  const flights = data.flights
+
+  // Find cheapest cash flight as the price-match reference
+  const cashFlights = flights
+    .filter(f => f.type === "cash" && f.cashPrice && f.cashPrice > 0)
+    .sort((a, b) => (a.cashPrice || Infinity) - (b.cashPrice || Infinity))
+
+  if (cashFlights.length === 0) {
+    return JSON.stringify({ error: "No cash flights found to use as price reference." })
+  }
+
+  const cheapest = cashFlights[0]!
+  const route = `${data.meta.origin} → ${data.meta.destination}`
+  const date = data.meta.departureDate
+
+  // Find the target airline's flights (or the most expensive one)
+  const targetFlights = targetAirline
+    ? flights.filter(f => f.type === "cash" && f.airline.toLowerCase().includes(targetAirline))
+    : cashFlights.filter(f => f.cashPrice && f.cashPrice > cheapest.cashPrice!)
+
+  const target = targetFlights[0]
+  const priceDiff = target?.cashPrice ? target.cashPrice - (cheapest.cashPrice || 0) : 0
+
+  return JSON.stringify({
+    route,
+    date,
+    cheapestFlight: {
+      airline: cheapest.airline,
+      price: cheapest.cashPrice,
+      cabin: cheapest.cabinClass,
+      stops: cheapest.stops,
+    },
+    targetFlight: target ? {
+      airline: target.airline,
+      price: target.cashPrice,
+      cabin: target.cabinClass,
+      priceDifference: priceDiff,
+    } : null,
+    emailTemplate: [
+      `Subject: Price Match Request — ${route} on ${date}`,
+      "",
+      `Dear ${target?.airline || "[Airline]"} Customer Service,`,
+      "",
+      `I am writing to request a price match for my upcoming flight from ${data.meta.origin} to ${data.meta.destination} on ${date}.`,
+      "",
+      `I found a comparable ${cheapest.cabinClass} class fare on ${cheapest.airline} for $${cheapest.cashPrice}, which is $${priceDiff} less than your current fare of $${target?.cashPrice || "[your price]"}.`,
+      "",
+      `As a loyal customer, I would prefer to fly with ${target?.airline || "[your airline]"} and would appreciate if you could match or come close to this competitor pricing.`,
+      "",
+      `Competitor details:`,
+      `- Airline: ${cheapest.airline}`,
+      `- Route: ${route}`,
+      `- Date: ${date}`,
+      `- Price: $${cheapest.cashPrice}`,
+      `- Cabin: ${cheapest.cabinClass}`,
+      `- Stops: ${cheapest.stops === 0 ? "Nonstop" : `${cheapest.stops} stop(s)`}`,
+      "",
+      `I would be happy to provide a screenshot of the competitor fare if needed.`,
+      "",
+      `Thank you for your time and consideration.`,
+      "",
+      `Best regards`,
+    ].join("\n"),
+    tip: "Most airlines have a price match window of 24-48 hours after booking. Some airlines (Southwest, JetBlue) have more flexible price match policies than legacy carriers.",
+  })
+}
+
+/**
+ * Analyze fare flexibility and estimated fees for a specific flight.
+ */
+export async function analyzeFareDetails(userId: string, input: ToolInput): Promise<string> {
+  const data = await loadFlightResults(userId)
+  if (!data) return NO_FLIGHTS
+
+  const { analyzeFareFlexibility, extractAirlineCode } = await import("@/lib/travel/fare-flexibility")
+  const { estimateAirlineFees, extractFirstIATA } = await import("@/lib/travel/airline-fees")
+
+  const airline = (input.airline as string)?.toLowerCase() || ""
+  const cabin = (input.cabin as string)?.toLowerCase() || ""
+
+  let flights = data.flights
+  if (airline) flights = flights.filter(f => f.airline.toLowerCase().includes(airline))
+  if (cabin) flights = flights.filter(f => f.cabinClass.toLowerCase() === cabin)
+
+  const analyzed = flights.slice(0, 10).map(f => {
+    const flex = analyzeFareFlexibility(f.fareClass, extractAirlineCode(f.airline))
+    const iata = extractFirstIATA(f.operatingAirlines, f.airline)
+    const fees = f.type === "cash" ? estimateAirlineFees(iata) : null
+
+    return {
+      airline: f.airline,
+      fareClass: f.fareClass,
+      cabin: f.cabinClass,
+      type: f.type,
+      price: f.type === "cash" ? `$${f.cashPrice}` : `${f.points?.toLocaleString()} pts`,
+      flexibility: flex ? {
+        level: flex.level,
+        label: flex.label,
+        refundable: flex.refundable,
+        changeable: flex.changeable,
+        changeFee: flex.changeFeeTier,
+      } : "Unknown fare class",
+      estimatedFees: fees && fees.total > 0 ? {
+        checkedBag: fees.checkedBag ? `$${fees.checkedBag}` : "Free",
+        carryOn: fees.carryOn ? `$${fees.carryOn}` : "Free",
+        seatSelection: fees.seatSelection ? `$${fees.seatSelection}` : "Included",
+        totalExtra: `$${fees.total}`,
+      } : "No additional fees expected",
+    }
+  })
+
+  return JSON.stringify({ count: analyzed.length, flights: analyzed })
+}

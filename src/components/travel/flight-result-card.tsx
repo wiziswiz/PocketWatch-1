@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils"
 import { SweetSpotBadge } from "./sweet-spot-badge"
 import { PROGRAM_DISPLAY_NAMES } from "@/lib/travel/constants"
 import { formatDuration } from "@/lib/travel/pick-selector"
+import { analyzeFareFlexibility, extractAirlineCode } from "@/lib/travel/fare-flexibility"
+import { estimateAirlineFees, extractFirstIATA } from "@/lib/travel/airline-fees"
 
 interface FlightResultCardProps {
   flight: ValueScoredFlight
@@ -67,6 +69,10 @@ export function FlightResultCard({ flight }: FlightResultCardProps) {
   const programName = flight.pointsProgram
     ? PROGRAM_DISPLAY_NAMES[flight.pointsProgram] || flight.pointsProgram
     : null
+
+  const flexibility = analyzeFareFlexibility(flight.fareClass, extractAirlineCode(flight.airline))
+  const iata = extractFirstIATA(flight.operatingAirlines, flight.airline)
+  const fees = flight.type === "cash" ? estimateAirlineFees(iata) : null
 
   const depTime = formatTime(flight.departureTime)
   const arrTime = formatTime(flight.arrivalTime)
@@ -182,6 +188,32 @@ export function FlightResultCard({ flight }: FlightResultCardProps) {
           {flight.flightNumbers.join(" / ")}
           {flight.equipment.length > 0 && ` · ${flight.equipment.join(", ")}`}
         </p>
+      )}
+
+      {/* Row 4: Flexibility + fees */}
+      {(flexibility || (fees && fees.total > 0)) && (
+        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+          {flexibility && (
+            <span className={cn(
+              "text-[10px] font-medium px-1.5 py-0.5 rounded",
+              flexibility.level === "flexible" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" :
+              flexibility.level === "semi-flexible" ? "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400" :
+              flexibility.level === "restricted" ? "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400" :
+              "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400"
+            )} title={flexibility.description}>
+              {flexibility.shortLabel}
+            </span>
+          )}
+          {fees && fees.total > 0 && (
+            <span className="text-[10px] text-foreground-muted" title={[
+              fees.checkedBag ? `Checked bag: $${fees.checkedBag}` : null,
+              fees.carryOn ? `Carry-on: $${fees.carryOn}` : null,
+              fees.seatSelection ? `Seat: $${fees.seatSelection}` : null,
+            ].filter(Boolean).join(", ")}>
+              est. +${fees.total} fees
+            </span>
+          )}
+        </div>
       )}
 
       {/* Value metrics for award flights */}
