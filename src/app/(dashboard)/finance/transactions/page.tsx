@@ -237,19 +237,19 @@ export default function FinanceTransactionsPage() {
             </span>
           </div>
 
-          <div className="relative flex-1 min-w-0 sm:min-w-[180px] bg-background-secondary border border-card-border rounded-lg">
-            <span className="material-symbols-rounded absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground-muted pointer-events-none" style={{ fontSize: 16 }}>search</span>
+          <div className="flex items-center gap-2 flex-1 min-w-0 sm:min-w-[180px] px-3 py-1.5 rounded-lg bg-background-secondary border border-card-border">
+            <span className="material-symbols-rounded text-foreground-muted flex-shrink-0" style={{ fontSize: 16 }}>search</span>
             <input
               type="text"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1) }}
               placeholder="Search merchants, descriptions..."
-              className="w-full pl-9 pr-8 py-1.5 rounded-lg bg-transparent text-xs text-foreground placeholder:text-foreground-muted/50 outline-none"
+              className="flex-1 min-w-0 bg-transparent text-xs text-foreground placeholder:text-foreground-muted/50 outline-none"
             />
             {search && (
               <button
                 onClick={() => { setSearch(""); setPage(1) }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground transition-colors"
+                className="text-foreground-muted hover:text-foreground transition-colors flex-shrink-0"
               >
                 <span className="material-symbols-rounded" style={{ fontSize: 14 }}>close</span>
               </button>

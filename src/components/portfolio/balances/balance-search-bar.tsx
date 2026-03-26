@@ -29,19 +29,19 @@ export function BalanceSearchBar({
     <div className="bg-card border border-card-border p-4 mb-4 rounded-xl">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         {/* Search */}
-        <div className="relative flex-1 border border-card-border rounded-lg focus-within:border-card-border-hover transition-colors">
-          <span className="material-symbols-rounded absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground-muted pointer-events-none" style={{ fontSize: 16 }}>search</span>
+        <div className="flex items-center gap-2 flex-1 px-3 py-2 rounded-lg border border-card-border focus-within:border-card-border-hover transition-colors">
+          <span className="material-symbols-rounded text-foreground-muted flex-shrink-0" style={{ fontSize: 16 }}>search</span>
           <input
             type="text"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search by asset, wallet, or chain..."
-            className="w-full pl-9 pr-8 py-2 bg-transparent outline-none text-foreground placeholder-foreground-muted rounded-lg text-sm"
+            className="flex-1 min-w-0 bg-transparent outline-none text-foreground placeholder-foreground-muted text-sm"
           />
           {search && (
             <button
               onClick={() => onSearchChange("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground transition-colors"
+              className="text-foreground-muted hover:text-foreground transition-colors flex-shrink-0"
             >
               <span className="material-symbols-rounded" style={{ fontSize: 14 }}>close</span>
             </button>

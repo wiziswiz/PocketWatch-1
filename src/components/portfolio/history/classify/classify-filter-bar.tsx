@@ -34,23 +34,23 @@ export function ClassifyFilterBar({
   return (
     <div className="bg-card border border-card-border p-4 mb-6 rounded-xl space-y-4">
       {/* Search */}
-      <div className="relative bg-background border border-card-border-hover rounded-lg focus-within:border-foreground transition-colors">
-        <span className="material-symbols-rounded absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground-muted pointer-events-none" style={{ fontSize: 16 }}>search</span>
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background border border-card-border-hover focus-within:border-foreground transition-colors">
+        <span className="material-symbols-rounded text-foreground-muted flex-shrink-0" style={{ fontSize: 16 }}>search</span>
         <input
           type="text"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Escape") onSearchChange("") }}
           placeholder="Search by tx hash, address, or symbol..."
-          className="w-full bg-transparent outline-none py-2 pl-9 pr-9 text-foreground placeholder-foreground-muted rounded-lg text-sm font-data"
+          className="flex-1 min-w-0 bg-transparent outline-none text-foreground placeholder-foreground-muted text-sm font-data"
         />
         {search && (
           <button
             onClick={() => onSearchChange("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground transition-colors"
+            className="text-foreground-muted hover:text-foreground transition-colors flex-shrink-0"
             title="Clear search"
           >
-            <span className="material-symbols-rounded text-[16px]">close</span>
+            <span className="material-symbols-rounded" style={{ fontSize: 16 }}>close</span>
           </button>
         )}
       </div>

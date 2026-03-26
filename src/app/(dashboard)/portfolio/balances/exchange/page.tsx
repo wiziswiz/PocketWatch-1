@@ -306,19 +306,19 @@ export default function ExchangeBalancesPage() {
           {rows.length > 0 && (
             <div className="flex items-center gap-3 mb-4">
               {/* Search */}
-              <div className="relative flex-1 max-w-xs border border-card-border rounded-lg focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-colors">
-                <span className="material-symbols-rounded absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground-muted pointer-events-none" style={{ fontSize: 16 }}>search</span>
+              <div className="flex items-center gap-2 flex-1 max-w-xs px-3 py-2 rounded-lg border border-card-border focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-colors">
+                <span className="material-symbols-rounded text-foreground-muted flex-shrink-0" style={{ fontSize: 16 }}>search</span>
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search assets..."
-                  className="w-full pl-9 pr-8 py-2 bg-transparent rounded-lg outline-none text-foreground placeholder-foreground-muted/40 text-sm"
+                  className="flex-1 min-w-0 bg-transparent outline-none text-foreground placeholder-foreground-muted/40 text-sm"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground transition-colors"
+                    className="text-foreground-muted hover:text-foreground transition-colors flex-shrink-0"
                   >
                     <span className="material-symbols-rounded" style={{ fontSize: 14 }}>close</span>
                   </button>

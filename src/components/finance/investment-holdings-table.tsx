@@ -130,19 +130,19 @@ export function InvestmentHoldingsTable({ holdings, totalValue }: Props) {
           <span className="text-[10px] text-foreground-muted/60">({sorted.length})</span>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:flex-initial sm:w-56 bg-background border border-card-border rounded-lg focus-within:border-primary/50">
-            <span className="material-symbols-rounded absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground-muted pointer-events-none" style={{ fontSize: 16 }}>search</span>
+          <div className="flex items-center gap-2 flex-1 sm:flex-initial sm:w-56 px-3 py-1.5 rounded-lg bg-background border border-card-border focus-within:border-primary/50">
+            <span className="material-symbols-rounded text-foreground-muted flex-shrink-0" style={{ fontSize: 16 }}>search</span>
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name or ticker..."
-              className="w-full pl-9 pr-8 py-1.5 text-xs bg-transparent text-foreground placeholder:text-foreground-muted/50 outline-none rounded-lg"
+              className="flex-1 min-w-0 bg-transparent text-xs text-foreground placeholder:text-foreground-muted/50 outline-none"
             />
             {search && (
               <button
                 onClick={() => setSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground transition-colors"
+                className="text-foreground-muted hover:text-foreground transition-colors flex-shrink-0"
               >
                 <span className="material-symbols-rounded" style={{ fontSize: 14 }}>close</span>
               </button>

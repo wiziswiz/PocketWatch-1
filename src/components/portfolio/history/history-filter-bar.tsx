@@ -56,8 +56,8 @@ export function HistoryFilterBar({
   return (
     <div className="bg-card border border-card-border p-4 mb-6 rounded-xl space-y-4">
       {/* Search row */}
-      <div className="relative bg-background border border-card-border-hover rounded-lg focus-within:border-foreground transition-colors">
-        <span className="material-symbols-rounded absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground-muted pointer-events-none" style={{ fontSize: 16 }}>search</span>
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background border border-card-border-hover focus-within:border-foreground transition-colors">
+        <span className="material-symbols-rounded text-foreground-muted flex-shrink-0" style={{ fontSize: 16 }}>search</span>
         <input
           type="text"
           value={search}
@@ -67,15 +67,15 @@ export function HistoryFilterBar({
             if (e.key === "Escape") { setSearch(""); setAppliedFilters((f) => { const { search: _, ...rest } = f; return rest }) }
           }}
           placeholder="Search by tx hash, wallet address, or counterparty..."
-          className="w-full bg-transparent outline-none py-2 pl-9 pr-9 text-foreground placeholder-foreground-muted rounded-lg text-sm font-data"
+          className="flex-1 min-w-0 bg-transparent outline-none text-foreground placeholder-foreground-muted text-sm font-data"
         />
         {search && (
           <button
             onClick={() => { setSearch(""); setAppliedFilters((f) => { const { search: _, ...rest } = f; return rest }); setOffset(0) }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground transition-colors"
+            className="text-foreground-muted hover:text-foreground transition-colors flex-shrink-0"
             title="Clear search"
           >
-            <span className="material-symbols-rounded text-[16px]">close</span>
+            <span className="material-symbols-rounded" style={{ fontSize: 16 }}>close</span>
           </button>
         )}
       </div>
