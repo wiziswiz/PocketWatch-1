@@ -68,11 +68,11 @@
 
 :root {
   /* Backgrounds */
-  --background: #FFFFFF;
-  --background-secondary: #F5F5F7;
-  --foreground: #1D1D1F;
-  --foreground-muted: #48484A;
-  --foreground-secondary: #58585C;
+  --background: #FAFAFA;
+  --background-secondary: #F0F0F2;
+  --foreground: #111113;
+  --foreground-muted: #6B6B70;
+  --foreground-secondary: #86868B;
 
   /* Primary — Apple Blue */
   --primary: #007AFF;
@@ -82,17 +82,17 @@
 
   /* Surface layers */
   --card: #FFFFFF;
-  --card-elevated: #F5F5F7;
-  --card-border: #E5E5EA;
-  --card-border-hover: #C7C7CC;
+  --card-elevated: #F0F0F2;
+  --card-border: #D1D1D6;
+  --card-border-hover: #B0B0B5;
 
   /* Semantic */
   --success: #34C759;
   --success-muted: rgba(52, 199, 89, 0.10);
   --warning: #FF9500;
   --warning-muted: rgba(255, 149, 0, 0.10);
-  --error: #FF3B30;
-  --error-muted: rgba(255, 59, 48, 0.10);
+  --error: #E5342E;
+  --error-muted: rgba(229, 52, 46, 0.10);
   --info: #007AFF;
   --info-muted: rgba(0, 122, 255, 0.10);
 
