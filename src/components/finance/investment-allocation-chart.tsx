@@ -13,6 +13,9 @@ interface Holding {
     name: string | null
     type: string | null
     sector: string | null
+    industry?: string | null
+    tickerSymbol?: string | null
+    isCashEquivalent?: boolean
   } | null
 }
 
@@ -43,6 +46,47 @@ function getTypeMeta(type: string | null) {
   if (!type) return TYPE_META.other
   const key = type.toLowerCase()
   return TYPE_META[key] ?? TYPE_META.other
+}
+
+/** Infer asset type from security data when Plaid's type field is null/generic */
+function inferType(security: Holding["security"]): string {
+  if (!security) return "other"
+
+  const rawType = security.type?.toLowerCase() ?? ""
+  // If Plaid gave a real type, use it
+  if (rawType && rawType !== "other" && rawType !== "miscellaneous" && TYPE_META[rawType]) {
+    return rawType
+  }
+
+  if (security.isCashEquivalent) return "cash"
+
+  const name = (security.name ?? "").toLowerCase()
+  if (name.includes(" etf") || name.includes("index fund")) return "etf"
+  if (name.includes("mutual fund") || name.includes("fund -") || name.includes("funds -")) return "mutual fund"
+  if (name.includes("bond") || name.includes("treasury") || name.includes("note ") || name.includes("fixed income")) return "fixed income"
+  if (name.includes("money market") || name.includes("cash") || name.includes("u s dollar") || name.includes("u.s. dollar")) return "cash"
+
+  // If it has a ticker, it's probably a stock
+  if (security.tickerSymbol && security.tickerSymbol.length <= 5) return "equity"
+
+  return rawType || "equity"
+}
+
+/** Infer sector from security data when Plaid's sector field is null */
+function inferSector(security: Holding["security"]): string {
+  if (!security) return "Unclassified"
+  if (security.sector && security.sector !== "Other" && security.sector !== "Miscellaneous") return security.sector
+  if (security.industry) return security.industry
+  if (security.isCashEquivalent) return "Cash & Equivalents"
+
+  const name = (security.name ?? "").toLowerCase()
+  if (name.includes("s&p") || name.includes("total stock") || name.includes("total market")) return "Broad Market"
+  if (name.includes("bond") || name.includes("treasury") || name.includes("fixed")) return "Fixed Income"
+  if (name.includes("international") || name.includes("emerging")) return "International"
+  if (name.includes("real estate") || name.includes("reit")) return "Real Estate"
+  if (name.includes("tech") || name.includes("technology")) return "Technology"
+
+  return "Unclassified"
 }
 
 // ─── Active Shape Renderer ─────────────────────────────────────
@@ -107,13 +151,13 @@ export function InvestmentAllocationChart({ holdings, totalValue, compact = fals
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined)
   const [groupMode, setGroupMode] = useState<GroupMode>("type")
 
-  // Group holdings by type or sector
+  // Group holdings by type or sector with smart inference
   const grouped = new Map<string, number>()
   for (const h of holdings) {
     if (h.institutionValue == null || h.institutionValue <= 0) continue
     const key = groupMode === "type"
-      ? (h.security?.type?.toLowerCase() ?? "other")
-      : (h.security?.sector ?? "Other")
+      ? inferType(h.security)
+      : inferSector(h.security)
     grouped.set(key, (grouped.get(key) ?? 0) + h.institutionValue)
   }
 
