@@ -244,7 +244,7 @@ export default function FinanceTransactionsPage() {
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1) }}
               placeholder="Search merchants, descriptions..."
-              className="flex-1 min-w-0 bg-transparent text-xs text-foreground placeholder:text-foreground-muted/50 outline-none"
+              className="flex-1 min-w-0 bg-transparent border-0 text-xs text-foreground placeholder:text-foreground-muted/50 outline-none"
             />
             {search && (
               <button

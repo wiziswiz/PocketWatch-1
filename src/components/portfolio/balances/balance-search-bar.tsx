@@ -36,7 +36,7 @@ export function BalanceSearchBar({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search by asset, wallet, or chain..."
-            className="flex-1 min-w-0 bg-transparent outline-none text-foreground placeholder-foreground-muted text-sm"
+            className="flex-1 min-w-0 bg-transparent border-0 outline-none text-foreground placeholder-foreground-muted text-sm"
           />
           {search && (
             <button

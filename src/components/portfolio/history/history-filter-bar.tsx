@@ -67,7 +67,7 @@ export function HistoryFilterBar({
             if (e.key === "Escape") { setSearch(""); setAppliedFilters((f) => { const { search: _, ...rest } = f; return rest }) }
           }}
           placeholder="Search by tx hash, wallet address, or counterparty..."
-          className="flex-1 min-w-0 bg-transparent outline-none text-foreground placeholder-foreground-muted text-sm font-data"
+          className="flex-1 min-w-0 bg-transparent border-0 outline-none text-foreground placeholder-foreground-muted text-sm font-data"
         />
         {search && (
           <button

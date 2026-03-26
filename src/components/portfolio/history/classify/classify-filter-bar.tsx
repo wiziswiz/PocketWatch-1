@@ -42,7 +42,7 @@ export function ClassifyFilterBar({
           onChange={(e) => onSearchChange(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Escape") onSearchChange("") }}
           placeholder="Search by tx hash, address, or symbol..."
-          className="flex-1 min-w-0 bg-transparent outline-none text-foreground placeholder-foreground-muted text-sm font-data"
+          className="flex-1 min-w-0 bg-transparent border-0 outline-none text-foreground placeholder-foreground-muted text-sm font-data"
         />
         {search && (
           <button

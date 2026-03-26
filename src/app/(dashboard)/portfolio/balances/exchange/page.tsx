@@ -313,7 +313,7 @@ export default function ExchangeBalancesPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search assets..."
-                  className="flex-1 min-w-0 bg-transparent outline-none text-foreground placeholder-foreground-muted/40 text-sm"
+                  className="flex-1 min-w-0 bg-transparent border-0 outline-none text-foreground placeholder-foreground-muted/40 text-sm"
                 />
                 {searchQuery && (
                   <button
