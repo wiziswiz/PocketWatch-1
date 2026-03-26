@@ -70,10 +70,16 @@ async function refreshPlaidStreams(userId: string): Promise<void> {
   const updates: Array<{ id: string; lastDate: Date }> = []
 
   for (const stream of streams) {
-    const searchName = stream.merchantName ?? stream.description
-    if (!searchName) continue
+    // Try both merchantName and description — Plaid streams often have
+    // a enriched merchantName that doesn't match raw transaction names
+    const candidates = [stream.description, stream.merchantName].filter(Boolean) as string[]
+    if (candidates.length === 0) continue
 
-    const match = await findNewerTransaction(userId, searchName, stream.accountId, stream.lastDate)
+    let match: Date | null = null
+    for (const name of candidates) {
+      match = await findNewerTransaction(userId, name, stream.accountId, stream.lastDate)
+      if (match) break
+    }
     if (!match) continue
 
     const freq = PLAID_FREQ_MAP[stream.frequency] ?? stream.frequency as Frequency
