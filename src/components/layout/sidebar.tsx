@@ -176,6 +176,7 @@ export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: Sidebar
             </button>
             <div className="w-px h-5 bg-card-border" />
             <NotificationBell />
+            <div className="w-px h-5 bg-card-border" />
             <button
               onClick={() => { router.push("/settings"); onClose?.() }}
               className={cn(

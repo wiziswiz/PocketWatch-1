@@ -5,7 +5,7 @@
 
 import { db } from "@/lib/db"
 import { detectFinancialEvents, type NewAlert } from "./transaction-intelligence"
-import { sendNotification } from "@/lib/notifications/dispatcher"
+import { sendWithPreferences } from "@/lib/notifications/dispatcher"
 
 function formatAlertPayload(alert: NewAlert) {
   return {
@@ -28,27 +28,33 @@ export async function detectAndNotify(userId: string): Promise<{ alertsSent: num
 
   for (const event of events) {
     const payload = formatAlertPayload(event)
-    const results = await sendNotification(userId, payload)
+    // Use preference-aware dispatch — respects category toggles,
+    // per-channel severity routing, quiet hours, and logs to Notification table
+    const results = await sendWithPreferences(userId, {
+      ...payload,
+      category: "finance",
+      alertType: event.alertType,
+      severity: "info",
+      metadata: event.metadata as Record<string, unknown> | undefined,
+    })
     const sentChannels = results.filter((r) => r.sent).map((r) => r.channel)
 
-    // Only persist alert if at least one channel was configured.
-    // If no channels exist, skip — so the alert can be re-detected
-    // once the user configures notification channels later.
-    if (results.length === 0) continue
-
-    await db.financeAlert.create({
-      data: {
-        userId,
-        alertType: event.alertType,
-        title: event.title,
-        message: event.message,
-        amount: event.amount,
-        merchantName: event.merchantName,
-        transactionId: event.transactionId,
-        metadata: event.metadata ? (event.metadata as Record<string, string | number | boolean | null>) : undefined,
-        channels: sentChannels,
-      },
-    })
+    // Also persist to FinanceAlert for backward compat with existing UI
+    if (results.length > 0) {
+      await db.financeAlert.create({
+        data: {
+          userId,
+          alertType: event.alertType,
+          title: event.title,
+          message: event.message,
+          amount: event.amount,
+          merchantName: event.merchantName,
+          transactionId: event.transactionId,
+          metadata: event.metadata ? (event.metadata as Record<string, string | number | boolean | null>) : undefined,
+          channels: sentChannels,
+        },
+      })
+    }
 
     alertsSent++
   }
@@ -84,11 +90,14 @@ export async function notifyPriceChanges(
     const fmtNew = `$${change.newAmount.toFixed(2)}`
     const message = `${change.merchantName} ${direction}: ${fmtOld} -> ${fmtNew}`
 
-    const results = await sendNotification(userId, {
+    const results = await sendWithPreferences(userId, {
       title: "Subscription Price Change",
       body: message,
       url: "/finance",
       tag: `price-change-${change.merchantName}`,
+      category: "finance",
+      alertType: "price_change",
+      severity: "watch",
     })
 
     const sentChannels = results.filter((r) => r.sent).map((r) => r.channel)

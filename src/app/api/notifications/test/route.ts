@@ -5,6 +5,7 @@
 import { getCurrentUser } from "@/lib/auth"
 import { apiError } from "@/lib/api-error"
 import { sendNotification } from "@/lib/notifications/dispatcher"
+import { db } from "@/lib/db"
 import { rateLimiters, getClientId } from "@/lib/rate-limit"
 import { NextRequest, NextResponse } from "next/server"
 
@@ -16,12 +17,27 @@ export async function POST(req: NextRequest) {
   if (!rl.success) return apiError("N4004", "Too many test notifications — try again later", 429)
 
   try {
+    // Bypass prefs for test — always send regardless of quiet hours / toggles
     const results = await sendNotification(user.id, {
       title: "PocketWatch Test",
       body: "If you see this, notifications are working!",
-      url: "/finance/settings",
+      url: "/settings",
       tag: "test",
     })
+
+    // Log to Notification table so it appears in the bell
+    const sentChannels = results.filter((r) => r.sent).map((r) => r.channel)
+    await db.notification.create({
+      data: {
+        userId: user.id,
+        category: "system",
+        alertType: "test",
+        severity: "info",
+        title: "PocketWatch Test",
+        body: "If you see this, notifications are working!",
+        channels: sentChannels,
+      },
+    }).catch(() => { /* best effort */ })
 
     if (results.length === 0) {
       return apiError("N4002", "No notification channels configured. Add a channel in Settings first.", 400)

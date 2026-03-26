@@ -20,10 +20,13 @@ async function notifyFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
 // ─── Query Keys ──────────────────────────────────────────────
 
+const HISTORY_PREFIX = [...notificationKeys.all, "history"] as const
+
 export const centerKeys = {
-  ...notificationKeys,
+  all: notificationKeys.all,
   unread: () => [...notificationKeys.all, "unread"] as const,
-  history: (filters?: Record<string, string>) => [...notificationKeys.all, "history", filters] as const,
+  historyPrefix: () => HISTORY_PREFIX,
+  history: (filters?: Record<string, unknown>) => [...HISTORY_PREFIX, filters] as const,
   preferences: () => [...notificationKeys.all, "preferences"] as const,
 }
 
@@ -71,7 +74,7 @@ export function useNotificationHistory(filters?: { limit?: number; offset?: numb
   const qs = params.toString()
 
   return useQuery({
-    queryKey: centerKeys.history(filters as Record<string, string>),
+    queryKey: centerKeys.history(filters as Record<string, unknown>),
     queryFn: () => notifyFetch<{ items: NotificationItem[]; total: number; limit: number; offset: number }>(
       `/history${qs ? `?${qs}` : ""}`,
     ),
@@ -99,7 +102,7 @@ export function useMarkRead() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: centerKeys.unread() })
-      qc.invalidateQueries({ queryKey: centerKeys.history() })
+      qc.invalidateQueries({ queryKey: centerKeys.historyPrefix() })
     },
   })
 }
@@ -111,7 +114,7 @@ export function useMarkAllRead() {
       notifyFetch<{ updated: number }>("/history", { method: "PUT" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: centerKeys.unread() })
-      qc.invalidateQueries({ queryKey: centerKeys.history() })
+      qc.invalidateQueries({ queryKey: centerKeys.historyPrefix() })
     },
   })
 }
