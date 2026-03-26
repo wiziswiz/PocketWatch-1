@@ -210,6 +210,40 @@ export function withAuthEncryption(
 }
 
 /**
+ * Create a session using a pre-wrapped DEK (for passkey authentication).
+ * Avoids the unwrap/re-wrap cycle by directly storing the wrapped DEK.
+ */
+export async function createSessionWithWrappedDek(
+  userId: string,
+  wrappedDek: string | null,
+) {
+  const nonce = crypto.randomUUID()
+  const expiresAt = new Date(Date.now() + SESSION_DURATION)
+
+  await db.session.deleteMany({ where: { userId } })
+
+  const session = await db.session.create({
+    data: {
+      userId,
+      nonce,
+      encryptedDek: wrappedDek,
+      expiresAt,
+    },
+  })
+
+  const cookieStore = await cookies()
+  cookieStore.set(SESSION_COOKIE, session.id, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    expires: expiresAt,
+    path: "/",
+  })
+
+  return session
+}
+
+/**
  * Wipe all data and reset the vault. Deletes everything.
  */
 export async function resetVault() {

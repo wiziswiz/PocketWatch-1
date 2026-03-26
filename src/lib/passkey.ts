@@ -1,0 +1,169 @@
+/**
+ * WebAuthn/Passkey utilities for PocketWatch.
+ *
+ * Handles challenge generation and storage, RP configuration,
+ * and wraps @simplewebauthn/server for registration and authentication.
+ */
+
+import type {
+  GenerateRegistrationOptionsOpts,
+  GenerateAuthenticationOptionsOpts,
+  VerifyRegistrationResponseOpts,
+  VerifyAuthenticationResponseOpts,
+} from "@simplewebauthn/server"
+import {
+  generateRegistrationOptions,
+  verifyRegistrationResponse,
+  generateAuthenticationOptions,
+  verifyAuthenticationResponse,
+} from "@simplewebauthn/server"
+
+// ---------------------------------------------------------------------------
+// Challenge store (in-memory with TTL)
+// ---------------------------------------------------------------------------
+
+interface StoredChallenge {
+  challenge: string
+  expiresAt: number
+}
+
+const CHALLENGE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+const challengeStore = new Map<string, StoredChallenge>()
+
+export function storeChallenge(userId: string, challenge: string): void {
+  challengeStore.set(userId, {
+    challenge,
+    expiresAt: Date.now() + CHALLENGE_TTL_MS,
+  })
+}
+
+export function consumeChallenge(userId: string): string | null {
+  const entry = challengeStore.get(userId)
+  challengeStore.delete(userId)
+  if (!entry || entry.expiresAt < Date.now()) return null
+  return entry.challenge
+}
+
+// Lazy cleanup on every store operation
+function cleanupChallenges(): void {
+  const now = Date.now()
+  for (const [key, entry] of challengeStore) {
+    if (entry.expiresAt < now) challengeStore.delete(key)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// RP (Relying Party) configuration
+// ---------------------------------------------------------------------------
+
+export interface RpConfig {
+  rpId: string
+  rpName: string
+  origin: string
+}
+
+/**
+ * Derive RP config from the incoming request.
+ * Works in both local dev and production without extra env vars.
+ */
+export function getRpConfig(request: Request): RpConfig {
+  const url = new URL(request.url)
+  return {
+    rpId: url.hostname,
+    rpName: "PocketWatch",
+    origin: url.origin,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Registration
+// ---------------------------------------------------------------------------
+
+export async function createRegistrationOptions(
+  userId: string,
+  userName: string,
+  existingCredentialIds: string[],
+  rp: RpConfig,
+): Promise<ReturnType<typeof generateRegistrationOptions>> {
+  cleanupChallenges()
+
+  const options = await generateRegistrationOptions({
+    rpName: rp.rpName,
+    rpID: rp.rpId,
+    userName,
+    attestationType: "none",
+    excludeCredentials: existingCredentialIds.map((id) => ({ id })),
+    authenticatorSelection: {
+      residentKey: "preferred",
+      userVerification: "preferred",
+    },
+  } satisfies GenerateRegistrationOptionsOpts)
+
+  storeChallenge(userId, options.challenge)
+  return options
+}
+
+export async function verifyRegistration(
+  userId: string,
+  response: unknown,
+  rp: RpConfig,
+): Promise<Awaited<ReturnType<typeof verifyRegistrationResponse>>> {
+  const expectedChallenge = consumeChallenge(userId)
+  if (!expectedChallenge) {
+    throw new Error("Challenge expired or not found")
+  }
+
+  return verifyRegistrationResponse({
+    response: response as VerifyRegistrationResponseOpts["response"],
+    expectedChallenge,
+    expectedOrigin: rp.origin,
+    expectedRPID: rp.rpId,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Authentication
+// ---------------------------------------------------------------------------
+
+export async function createAuthenticationOptions(
+  userId: string,
+  credentialIds: string[],
+  rp: RpConfig,
+): Promise<ReturnType<typeof generateAuthenticationOptions>> {
+  cleanupChallenges()
+
+  const options = await generateAuthenticationOptions({
+    rpID: rp.rpId,
+    allowCredentials: credentialIds.map((id) => ({ id })),
+    userVerification: "preferred",
+  } satisfies GenerateAuthenticationOptionsOpts)
+
+  storeChallenge(userId, options.challenge)
+  return options
+}
+
+export async function verifyAuthentication(
+  userId: string,
+  response: unknown,
+  credentialId: string,
+  credentialPublicKey: Uint8Array,
+  credentialCounter: bigint,
+  rp: RpConfig,
+): Promise<Awaited<ReturnType<typeof verifyAuthenticationResponse>>> {
+  const expectedChallenge = consumeChallenge(userId)
+  if (!expectedChallenge) {
+    throw new Error("Challenge expired or not found")
+  }
+
+  return verifyAuthenticationResponse({
+    response: response as VerifyAuthenticationResponseOpts["response"],
+    expectedChallenge,
+    expectedOrigin: rp.origin,
+    expectedRPID: rp.rpId,
+    credential: {
+      id: credentialId,
+      publicKey: new Uint8Array(credentialPublicKey),
+      counter: Number(credentialCounter),
+    },
+  })
+}

@@ -60,6 +60,7 @@ model User {
   plaidSyncJobs                 PlaidSyncJob[]
   flightSearchResult            FlightSearchResult?
   financeAlerts                 FinanceAlert[]
+  passkeys                      Passkey[]
 
 }
 
@@ -74,6 +75,22 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model Passkey {
+  id           String   @id @default(cuid())
+  userId       String
+  credentialId String   @unique
+  publicKey    Bytes
+  counter      BigInt   @default(0)
+  transports   String[]
+  name         String   @default("Passkey")
+  wrappedDek   String?
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model ExternalApiKey {
