@@ -151,9 +151,14 @@ export default function FinanceCardsPage() {
     return groups
   }, [mergedCards])
 
-  // Totals
-  const totalBalance = creditAccounts.reduce((sum, a) => sum + Math.abs(a.currentBalance ?? 0), 0)
-  const totalLimit = creditAccounts.reduce((sum, a) => sum + (a.creditLimit ?? 0), 0)
+  // Totals — only sum credit limits from actual credit/business_credit accounts
+  // (cardAccountIds may include non-credit accounts like checking that have card profiles)
+  const totalBalance = creditAccounts
+    .filter((a) => a.type === "credit" || a.type === "business_credit")
+    .reduce((sum, a) => sum + Math.abs(a.currentBalance ?? 0), 0)
+  const totalLimit = creditAccounts
+    .filter((a) => (a.type === "credit" || a.type === "business_credit") && a.creditLimit != null && a.creditLimit > 0)
+    .reduce((sum, a) => sum + (a.creditLimit ?? 0), 0)
   const utilization = totalLimit > 0 ? (totalBalance / totalLimit * 100) : 0
   const issuerCount = Object.keys(cardsByIssuer).length
 
