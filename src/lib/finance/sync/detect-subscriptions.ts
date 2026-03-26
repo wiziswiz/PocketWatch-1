@@ -42,6 +42,7 @@ export async function detectAndSaveSubscriptions(userId: string): Promise<{
 
   const detected = detectSubscriptions(
     transactions.map((t) => ({
+      id: t.id,
       merchantName: t.merchantName,
       rawName: t.name,
       amount: t.amount,
@@ -126,6 +127,7 @@ export async function detectAndSaveSubscriptions(userId: string): Promise<{
             lastChargeDate: new Date(sub.lastChargeDate),
             nextChargeDate: new Date(sub.nextChargeDate),
             accountId: sub.accountId,
+            lastTransactionId: sub.lastTransactionId,
           },
         })
         updatedCount++
@@ -143,6 +145,7 @@ export async function detectAndSaveSubscriptions(userId: string): Promise<{
         accountId: sub.accountId,
         lastChargeDate: new Date(sub.lastChargeDate),
         nextChargeDate: new Date(sub.nextChargeDate),
+        lastTransactionId: sub.lastTransactionId,
         status: "active",
       },
     })

@@ -33,7 +33,7 @@ async function refreshMaterializedSubs(userId: string): Promise<void> {
     select: { id: true, merchantName: true, accountId: true, frequency: true, lastChargeDate: true, amount: true },
   })
 
-  const updates: Array<{ id: string; lastChargeDate: Date; nextChargeDate: Date }> = []
+  const updates: Array<{ id: string; lastChargeDate: Date; nextChargeDate: Date; lastTransactionId: string }> = []
 
   for (const sub of subs) {
     const match = await findNewerTransaction(userId, sub.merchantName, sub.accountId, sub.lastChargeDate)
@@ -42,14 +42,19 @@ async function refreshMaterializedSubs(userId: string): Promise<void> {
     const freq = sub.frequency as Frequency
     if (!VALID_FREQS.includes(freq)) continue
 
-    updates.push({ id: sub.id, lastChargeDate: match, nextChargeDate: computeNextChargeDate(match, freq) })
+    updates.push({
+      id: sub.id,
+      lastChargeDate: match.date,
+      nextChargeDate: computeNextChargeDate(match.date, freq),
+      lastTransactionId: match.transactionId,
+    })
   }
 
   if (updates.length > 0) {
     await db.$transaction(
       updates.map((u) => db.financeSubscription.update({
         where: { id: u.id },
-        data: { lastChargeDate: u.lastChargeDate, nextChargeDate: u.nextChargeDate },
+        data: { lastChargeDate: u.lastChargeDate, nextChargeDate: u.nextChargeDate, lastTransactionId: u.lastTransactionId },
       }))
     )
   }
@@ -75,7 +80,7 @@ async function refreshPlaidStreams(userId: string): Promise<void> {
     const candidates = [stream.description, stream.merchantName].filter(Boolean) as string[]
     if (candidates.length === 0) continue
 
-    let match: Date | null = null
+    let match: { date: Date; transactionId: string } | null = null
     for (const name of candidates) {
       match = await findNewerTransaction(userId, name, stream.accountId, stream.lastDate)
       if (match) break
@@ -85,7 +90,7 @@ async function refreshPlaidStreams(userId: string): Promise<void> {
     const freq = PLAID_FREQ_MAP[stream.frequency] ?? stream.frequency as Frequency
     if (!VALID_FREQS.includes(freq)) continue
 
-    updates.push({ id: stream.id, lastDate: match })
+    updates.push({ id: stream.id, lastDate: match.date })
   }
 
   if (updates.length > 0) {
@@ -104,7 +109,7 @@ async function findNewerTransaction(
   merchantName: string,
   accountId: string | null,
   currentLastDate: Date | null,
-): Promise<Date | null> {
+): Promise<{ date: Date; transactionId: string } | null> {
   const since = currentLastDate ?? new Date(Date.now() - 400 * 24 * 60 * 60 * 1000)
 
   // Clean the merchant name for search — strip account suffixes like "••••1234 Annual Fee"
@@ -128,7 +133,7 @@ async function findNewerTransaction(
       ],
       ...(accountId ? { accountId } : {}),
     },
-    select: { date: true },
+    select: { id: true, date: true },
     orderBy: { date: "desc" },
   })
 
@@ -137,5 +142,5 @@ async function findNewerTransaction(
   const txDate = new Date(tx.date)
   if (currentLastDate && txDate <= new Date(currentLastDate)) return null
 
-  return txDate
+  return { date: txDate, transactionId: tx.id }
 }

@@ -6,11 +6,24 @@ import { MerchantIcon } from "@/components/finance/merchant-icon"
 import { getBillingUrgency } from "@/components/finance/subscription-card-helpers"
 import { SubscriptionCardActions } from "@/components/finance/subscription-card-actions"
 import { SubscriptionCardTransactions } from "@/components/finance/subscription-card-transactions"
+import { SubscriptionLinkedProof } from "@/components/finance/subscription-linked-proof"
 
 interface RecentTransaction {
   amount: number
   date: string
   name: string
+}
+
+interface LinkedTransaction {
+  id: string
+  name: string
+  merchantName: string | null
+  amount: number
+  date: string
+  accountName: string | null
+  accountMask: string | null
+  institutionName: string | null
+  category: string | null
 }
 
 interface SubscriptionCardProps {
@@ -31,6 +44,7 @@ interface SubscriptionCardProps {
   accountType?: string | null
   institutionName?: string | null
   recentTransactions?: RecentTransaction[]
+  linkedTransaction?: LinkedTransaction | null
   cancelReminderDate?: string | null
   onUpdateStatus?: (id: string, status: string) => void
   onToggleWanted?: (id: string, isWanted: boolean) => void
@@ -77,7 +91,7 @@ const FREQUENCY_OPTIONS: Array<{ value: string; label: string }> = [
 export function SubscriptionCard({
   id, merchantName, nickname, amount, frequency, status, isWanted, nextChargeDate,
   category, logoUrl, detectionMethod, averageAmount, accountName, accountMask,
-  accountType, institutionName, recentTransactions, cancelReminderDate,
+  accountType, institutionName, recentTransactions, linkedTransaction, cancelReminderDate,
   onUpdateStatus, onToggleWanted, onRequestCancel, onUpdateNickname,
   onUpdateFrequency, onUpdateCategory, onSetReminder, onDismiss,
 }: SubscriptionCardProps) {
@@ -285,6 +299,11 @@ export function SubscriptionCard({
         onSetReminder={onSetReminder}
         onDismiss={onDismiss}
       />
+
+      {/* Linked transaction proof — the exact charge that proves this was paid */}
+      {linkedTransaction && (
+        <SubscriptionLinkedProof transaction={linkedTransaction} />
+      )}
 
       {/* Expandable transaction history */}
       <SubscriptionCardTransactions transactions={txns} />

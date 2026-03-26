@@ -76,6 +76,7 @@ const CC_PAYMENT_PATTERNS = [
 ]
 
 interface TransactionInput {
+  id: string
   merchantName: string | null
   rawName: string
   amount: number
@@ -93,6 +94,7 @@ export interface DetectedSubscription {
   lastChargeDate: string
   nextChargeDate: string
   accountId: string
+  lastTransactionId: string // exact transaction ID that proves the last charge
   confidence: number // 0-1
   category: string | null
 }
@@ -131,7 +133,7 @@ function clusterByAmount<T extends { amount: number }>(items: T[]): T[][] {
  */
 function analyzeCluster(
   merchantName: string,
-  charges: Array<{ amount: number; date: string; accountId: string; category?: string | null }>,
+  charges: Array<{ id: string; amount: number; date: string; accountId: string; category?: string | null }>,
   existingSubscriptions: ExistingSubscription[],
 ): DetectedSubscription | null {
   if (charges.length < 2) return null
@@ -207,6 +209,7 @@ function analyzeCluster(
     lastChargeDate: lastCharge.date,
     nextChargeDate: nextDate.toISOString().split("T")[0],
     accountId: lastCharge.accountId,
+    lastTransactionId: lastCharge.id,
     confidence,
     category: topCategory,
   }
@@ -222,7 +225,7 @@ export function detectSubscriptions(
   existingSubscriptions: ExistingSubscription[] = []
 ): DetectedSubscription[] {
   // Group by cleaned merchant name
-  const groups = new Map<string, Array<{ amount: number; date: string; accountId: string; category?: string | null }>>()
+  const groups = new Map<string, Array<{ id: string; amount: number; date: string; accountId: string; category?: string | null }>>()
 
   for (const tx of transactions) {
     if (tx.amount < MIN_SUBSCRIPTION_AMOUNT) continue
@@ -247,7 +250,7 @@ export function detectSubscriptions(
     if (!groupKey) groupKey = cleaned
 
     const group = groups.get(groupKey) ?? []
-    group.push({ amount: tx.amount, date: tx.date, accountId: tx.accountId, category: tx.category })
+    group.push({ id: tx.id, amount: tx.amount, date: tx.date, accountId: tx.accountId, category: tx.category })
     groups.set(groupKey, group)
   }
 
