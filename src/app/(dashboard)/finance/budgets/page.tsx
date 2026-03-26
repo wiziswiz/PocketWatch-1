@@ -24,7 +24,7 @@ import { toast } from "sonner"
 export default function FinanceBudgetsPage() {
   const { data: budgets, isLoading, isError } = useFinanceBudgets()
   const { data: deep } = useFinanceDeepInsights()
-  const { data: txData } = useFinanceTransactions({ limit: 200 })
+  const { data: txData } = useFinanceTransactions({ limit: 100 })
   const { data: suggestions } = useBudgetSuggestions()
   const { data: subsData } = useFinanceSubscriptions()
   const createBudget = useCreateBudget()
