@@ -6,8 +6,6 @@ import { SolanaKeyWarning } from "@/components/portfolio/settings/solana-key-war
 import { ApiKeysSection } from "@/components/portfolio/settings/api-keys-section"
 import { ExchangeConnectionsSection } from "@/components/portfolio/settings/exchange-connections-section"
 import { PreferencesSection } from "@/components/portfolio/settings/preferences-section"
-import { PasswordChangeSection } from "@/components/portfolio/settings/password-change-section"
-import { PasskeySection } from "@/components/portfolio/settings/passkey-section"
 import { DataManagementSection } from "@/components/portfolio/settings/data-management-section"
 
 export default function SettingsPage() {
@@ -38,13 +36,7 @@ export default function SettingsPage() {
       {/* Section 3: Preferences */}
       <PreferencesSection />
 
-      {/* Section 4: Security */}
-      <PasswordChangeSection />
-
-      {/* Section 5: Passkeys */}
-      <PasskeySection />
-
-      {/* Section 6: Data Management */}
+      {/* Section 4: Data Management */}
       <DataManagementSection />
     </div>
   )

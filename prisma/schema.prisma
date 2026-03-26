@@ -60,6 +60,8 @@ model User {
   plaidSyncJobs                 PlaidSyncJob[]
   flightSearchResult            FlightSearchResult?
   financeAlerts                 FinanceAlert[]
+  notifications                 Notification[]
+  notificationPreference        NotificationPreference?
   passkeys                      Passkey[]
 
 }
@@ -1283,6 +1285,42 @@ model FinanceAlert {
   @@index([userId, sentAt])
   @@index([userId, alertType])
   @@index([userId, transactionId])
+}
+
+// ─── Unified Notification System ──────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  category  String   // finance | crypto | travel | system
+  alertType String   // budget_warning | price_alert | sync_failure | etc.
+  severity  String   @default("info") // info | watch | urgent
+  title     String
+  body      String
+  metadata  Json?
+  channels  String[] @default([])
+  readAt    DateTime?
+  sentAt    DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sentAt])
+  @@index([userId, readAt])
+  @@index([userId, category])
+}
+
+model NotificationPreference {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  // Per-channel severity thresholds (JSON: { telegram: "urgent", webpush: "watch", brrr: "info" })
+  channelSeverity Json    @default("{}")
+  // Per-category enable/disable (JSON: { finance: true, crypto: true, travel: true, system: true })
+  categories      Json    @default("{}")
+  // Quiet hours
+  quietEnabled    Boolean @default(false)
+  quietStart      String  @default("22:00")
+  quietEnd        String  @default("07:00")
+  quietOverride   Boolean @default(true) // urgent bypasses quiet hours
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model FlightSearchResult {

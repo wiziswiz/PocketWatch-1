@@ -1,7 +1,7 @@
 "use client"
 
 import { memo } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { SidebarNavSection } from "./sidebar-nav-section"
@@ -20,6 +20,7 @@ interface SidebarProps {
 
 export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const { data: reviewCountData } = useReviewCount()
   const financeBadges = reviewCountData?.count ? { "fin-transactions": reviewCountData.count } : undefined
   const {
@@ -164,13 +165,27 @@ export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: Sidebar
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={handleLock}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-foreground-muted hover:text-foreground hover:bg-background-secondary"
             >
               <span className="material-symbols-rounded text-lg" aria-hidden="true">lock_open</span>
               <span>Lock</span>
+            </button>
+            <div className="w-px h-5 bg-card-border" />
+            <button
+              onClick={() => { router.push("/settings"); onClose?.() }}
+              className={cn(
+                "flex items-center justify-center w-9 h-9 rounded-lg transition-colors",
+                pathname === "/settings"
+                  ? "text-primary bg-primary-muted"
+                  : "text-foreground-muted hover:text-foreground hover:bg-background-secondary"
+              )}
+              aria-label="System settings"
+              title="System settings"
+            >
+              <span className="material-symbols-rounded text-lg" aria-hidden="true">settings</span>
             </button>
             <span className="ml-auto text-[10px] text-foreground-muted/40 tabular-nums" title={`Build ${process.env.NEXT_PUBLIC_BUILD_HASH}`}>
               v{process.env.NEXT_PUBLIC_BUILD_VERSION}

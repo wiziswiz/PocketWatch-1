@@ -147,9 +147,9 @@ function WebPushChannelCard() {
       if (ok) toast.success("Web push disabled")
       else toast.error("Failed to disable web push")
     } else {
-      const ok = await subscribe()
-      if (ok) toast.success("Web push enabled")
-      else toast.error("Check browser notification permissions")
+      const result = await subscribe()
+      if (result.ok) toast.success("Web push enabled — try Send Test Notification")
+      else toast.error(result.error ?? "Failed to enable web push")
     }
   }
 
@@ -193,9 +193,11 @@ export function NotificationSettings() {
   const saveMutation = useSaveNotificationChannel()
   const deleteMutation = useDeleteNotificationChannel()
   const testMutation = useTestNotification()
+  const push = usePushNotifications()
 
   const brrrConfigured = data?.channels.find((c) => c.channel === "brrr")?.configured ?? false
   const telegramConfigured = data?.channels.find((c) => c.channel === "telegram")?.configured ?? false
+  const hasAnyChannel = brrrConfigured || telegramConfigured || push.isSubscribed
 
   const handleSaveBrrr = (webhookUrl: string) => {
     saveMutation.mutate(
@@ -211,11 +213,21 @@ export function NotificationSettings() {
     )
   }
 
-  const handleTest = () => {
+  const handleTest = async () => {
+    // If no channels configured and web push is available, auto-enable it first
+    if (!hasAnyChannel && push.isSupported && !push.isSubscribed) {
+      const result = await push.subscribe()
+      if (!result.ok) {
+        toast.error(result.error ?? "Enable a notification channel first")
+        return
+      }
+      toast.success("Web push enabled")
+    }
+
     testMutation.mutate(undefined, {
       onSuccess: (res) => {
         if (res.sent > 0) toast.success(`Test sent to ${res.sent} channel(s)`)
-        else toast.error("No channels responded")
+        else toast.error("No channels responded — try enabling a channel above")
       },
       onError: (e) => toast.error(e.message),
     })
@@ -233,10 +245,13 @@ export function NotificationSettings() {
         <WebPushChannelCard />
       </div>
 
-      <div className="flex items-center justify-between border-t border-card-border pt-4">
-        <button onClick={handleTest} disabled={testMutation.isPending} className="px-4 py-2 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50">
-          {testMutation.isPending ? "Sending..." : "Send Test Notification"}
+      <div className="flex items-center justify-between gap-3 border-t border-card-border pt-4">
+        <button onClick={handleTest} disabled={testMutation.isPending || push.isLoading} className="px-4 py-2 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50">
+          {testMutation.isPending || push.isLoading ? "Sending..." : hasAnyChannel ? "Send Test Notification" : "Enable & Test"}
         </button>
+        {!hasAnyChannel && (
+          <span className="text-[10px] text-foreground-muted">No channels enabled yet</span>
+        )}
       </div>
 
       {data?.recentAlerts && data.recentAlerts.length > 0 && (

@@ -28,10 +28,7 @@ import type { FinanceVerificationState } from "@/lib/finance/verification-types"
 import { SettingsProviderCards } from "@/components/finance/settings/settings-provider-cards"
 import { SettingsPlaidKeys } from "@/components/finance/settings/settings-plaid-keys"
 import { StatementCoverageContent } from "@/components/finance/settings/statement-coverage-card"
-import { AutoLockSetting } from "@/components/finance/settings/auto-lock-setting"
 import { StatementUploadInline } from "@/components/finance/settings/statement-upload-inline"
-import { NotificationSettings } from "@/components/finance/settings/notification-settings"
-import { BackupSection } from "@/components/finance/settings/backup-section"
 
 function deriveVerificationState(payload?: Partial<FinanceCredentialVerificationResponse> | null): {
   verificationState: FinanceVerificationState
@@ -360,16 +357,6 @@ export default function FinanceSettingsPage() {
       </CollapsibleSection>
 
       <CollapsibleSection
-        title="Notifications"
-        icon="notifications"
-        className="rounded-xl"
-      >
-        <div className="pt-4">
-          <NotificationSettings />
-        </div>
-      </CollapsibleSection>
-
-      <CollapsibleSection
         title="AI Intelligence"
         icon="smart_toy"
         className="rounded-xl"
@@ -377,23 +364,6 @@ export default function FinanceSettingsPage() {
         <div className="pt-4">
           <AIProviderSettings />
         </div>
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title="Security"
-        icon="shield"
-        defaultOpen
-        className="rounded-xl"
-      >
-        <AutoLockSetting />
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title="Backup & Restore"
-        icon="cloud_download"
-        className="rounded-xl"
-      >
-        <BackupSection />
       </CollapsibleSection>
 
       <CollapsibleSection

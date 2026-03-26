@@ -32,19 +32,24 @@ export function usePushNotifications() {
       .finally(() => setIsLoading(false))
   }, [])
 
-  const subscribe = useCallback(async (): Promise<boolean> => {
-    if (!isSupported) return false
+  const subscribe = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
+    if (!isSupported) return { ok: false, error: "Push notifications are not supported in this browser" }
     setIsLoading(true)
     try {
-      // Request notification permission first
+      // Check secure context (required for Push API)
+      if (typeof window !== "undefined" && !window.isSecureContext) {
+        return { ok: false, error: "Push notifications require HTTPS. Access via https:// or localhost." }
+      }
+
       const permission = await Notification.requestPermission()
-      if (permission !== "granted") return false
+      if (permission === "denied") return { ok: false, error: "Notification permission was denied. Reset it in your browser settings." }
+      if (permission !== "granted") return { ok: false, error: "Notification permission is required" }
 
       // Fetch VAPID public key from server
       const keyRes = await fetch("/api/notifications/push/subscribe", { credentials: "include" })
-      if (!keyRes.ok) throw new Error("Failed to get VAPID key")
+      if (!keyRes.ok) return { ok: false, error: "Failed to get push configuration from server" }
       const { publicKey } = await keyRes.json()
-      if (!publicKey) throw new Error("No VAPID key configured")
+      if (!publicKey) return { ok: false, error: "VAPID keys not configured on server" }
 
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.subscribe({
@@ -57,18 +62,19 @@ export function usePushNotifications() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          endpoint: subJson.endpoint,
-          keys: subJson.keys,
-        }),
+        body: JSON.stringify({ endpoint: subJson.endpoint, keys: subJson.keys }),
       })
 
-      if (!res.ok) throw new Error("Failed to save subscription")
+      if (!res.ok) return { ok: false, error: "Failed to save push subscription" }
       setIsSubscribed(true)
-      return true
+      return { ok: true }
     } catch (err) {
       console.error("[push] Subscribe failed:", err)
-      return false
+      const msg = err instanceof Error ? err.message : "Unknown error"
+      if (msg.includes("secure context") || msg.includes("SecurityError")) {
+        return { ok: false, error: "Push notifications require HTTPS. Access via https:// or localhost." }
+      }
+      return { ok: false, error: `Push subscription failed: ${msg}` }
     } finally {
       setIsLoading(false)
     }
