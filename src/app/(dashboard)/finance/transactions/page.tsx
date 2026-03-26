@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import {
@@ -48,11 +48,13 @@ const categoryKeys = Object.keys(FINANCE_CATEGORIES)
 
 export default function FinanceTransactionsPage() {
   const searchParams = useSearchParams()
+  const initialSearch = searchParams.get("search") ?? ""
+  const highlightId = searchParams.get("highlight") ?? ""
   const [page, setPage] = useState(1)
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState(initialSearch)
   const [category, setCategory] = useState(searchParams.get("category") ?? "")
   const [accountId, setAccountId] = useState(searchParams.get("account") ?? "")
-  const [dateRange, setDateRange] = useState(category ? "all" : "this-month")
+  const [dateRange, setDateRange] = useState(category || initialSearch ? "all" : "this-month")
   const [txType, setTxType] = useState("")
   const [customStart, setCustomStart] = useState("")
   const [customEnd, setCustomEnd] = useState("")
@@ -80,6 +82,15 @@ export default function FinanceTransactionsPage() {
   const to = Math.min(page * 50, total)
 
   const { data: reviewData } = useReviewCount()
+
+  // Scroll to highlighted transaction (from subscription proof link)
+  useEffect(() => {
+    if (!highlightId || !data?.transactions) return
+    const el = document.getElementById(`tx-${highlightId}`)
+    if (el) {
+      setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 300)
+    }
+  }, [highlightId, data?.transactions])
   const reviewCount = reviewData?.count ?? 0
   const hasFilters = search || category || accountId || txType || dateRange !== "this-month"
   const uncategorizedCount = deep?.uncategorizedCount ?? 0
@@ -281,6 +292,7 @@ export default function FinanceTransactionsPage() {
             <TransactionRow
               key={tx.id}
               id={tx.id}
+              isHighlighted={tx.id === highlightId}
               date={tx.date}
               merchantName={tx.merchantName}
               name={tx.name}

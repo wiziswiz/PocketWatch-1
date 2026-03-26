@@ -104,7 +104,7 @@ export async function detectAndSaveSubscriptions(userId: string): Promise<{
     )
 
     if (matchingExisting) {
-      if (matchingExisting.status === "dismissed") continue
+      if (matchingExisting.status === "dismissed" || matchingExisting.status === "cancelled") continue
 
       const freqChanged = matchingExisting.frequency !== sub.frequency
       const amountDiff = Math.abs(matchingExisting.amount - sub.amount) / Math.max(matchingExisting.amount, sub.amount)

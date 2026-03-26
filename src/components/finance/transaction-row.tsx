@@ -28,6 +28,7 @@ interface TransactionRowProps {
   location?: { city?: string | null; region?: string | null; postalCode?: string | null; country?: string | null } | null
   counterparties?: Array<{ name: string; type: string; logoUrl?: string | null }> | null
   needsReview?: boolean
+  isHighlighted?: boolean
   onCategoryChange?: (category: string, createRule: boolean) => void
 }
 
@@ -35,7 +36,7 @@ export function TransactionRow({
   id, date, merchantName, name, amount, category, subcategory,
   notes, isPending, accountName, accountMask, className,
   paymentChannel, authorizedDate, logoUrl, website, location, counterparties,
-  needsReview,
+  needsReview, isHighlighted,
   onCategoryChange,
 }: TransactionRowProps) {
   const [expanded, setExpanded] = useState(false)
@@ -82,7 +83,14 @@ export function TransactionRow({
   }, [retagOpen])
 
   return (
-    <div className={cn("border-b border-card-border/50", className)}>
+    <div
+      id={isHighlighted ? `tx-${id}` : undefined}
+      className={cn(
+        "border-b border-card-border/50",
+        isHighlighted && "ring-2 ring-primary/40 bg-primary/5 rounded-lg",
+        className,
+      )}
+    >
       <div
         role="button"
         tabIndex={0}
