@@ -28,14 +28,18 @@ const TAG_LENGTH = 128
 
 /**
  * Derive a 256-bit AES key from the vault password + salt.
+ * Uses "pw-backup:" domain prefix to separate from the per-user DEK
+ * derivation in per-user-crypto.ts (which uses the raw password).
  */
+const BACKUP_DOMAIN_PREFIX = "pw-backup:"
+
 async function deriveBackupKey(
   password: string,
   salt: Uint8Array,
 ): Promise<CryptoKey> {
   const passwordKey = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(password),
+    new TextEncoder().encode(BACKUP_DOMAIN_PREFIX + password),
     "PBKDF2",
     false,
     ["deriveBits"],

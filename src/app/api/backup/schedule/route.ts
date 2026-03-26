@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
       .join("")
 
     const { deriveKey } = await import("@/lib/per-user-crypto")
-    const backupKeyHex = await deriveKey(body.password, salt)
+    const backupKeyHex = await deriveKey("pw-backup:" + body.password, salt)
 
     // encrypt() uses ENCRYPTION_KEY directly — no user DEK needed
     config.wrappedBackupKey = await encrypt(backupKeyHex)

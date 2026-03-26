@@ -4,6 +4,7 @@
  * resets stuck jobs, patches timestamps, and creates a fresh session.
  */
 
+import { Prisma } from "@/generated/prisma/client"
 import { db } from "@/lib/db"
 import { withEncryptionKey } from "@/lib/encryption-context"
 import { deriveKey, wrapDek } from "@/lib/per-user-crypto"
@@ -147,8 +148,8 @@ export async function importBackup(
   vaultPassword: string,
 ): Promise<ImportResult> {
   // Acquire advisory lock — prevents concurrent imports
-  const [lockResult] = await db.$queryRawUnsafe<[{ pg_try_advisory_lock: boolean }]>(
-    `SELECT pg_try_advisory_lock(${IMPORT_LOCK_ID})`,
+  const [lockResult] = await db.$queryRaw<[{ pg_try_advisory_lock: boolean }]>(
+    Prisma.sql`SELECT pg_try_advisory_lock(${IMPORT_LOCK_ID})`,
   )
   if (!lockResult.pg_try_advisory_lock) {
     throw new Error("Another import is already in progress. Please wait and try again.")
@@ -235,6 +236,6 @@ export async function importBackup(
   } finally {
     // restoreKeys is idempotent — safe to call again if session creation threw
     restoreKeys()
-    await db.$queryRawUnsafe(`SELECT pg_advisory_unlock(${IMPORT_LOCK_ID})`).catch(() => {})
+    await db.$queryRaw(Prisma.sql`SELECT pg_advisory_unlock(${IMPORT_LOCK_ID})`).catch(() => {})
   }
 }
