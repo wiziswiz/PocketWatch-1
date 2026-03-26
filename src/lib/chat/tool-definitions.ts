@@ -114,4 +114,27 @@ export const TOOL_DEFINITIONS = [
       required: [] as string[],
     },
   },
+  {
+    name: "generate_price_match_email",
+    description: "Generate a price match / negotiation email based on flight search results. Finds the cheapest competitor fare and drafts a persuasive email to request a price match from another airline.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        airline: { type: "string", description: "Target airline to send the price match request to (optional — uses the most expensive if omitted)." },
+      },
+      required: [] as string[],
+    },
+  },
+  {
+    name: "analyze_fare_details",
+    description: "Analyze fare flexibility (refundable? changeable? change fees?) and estimate ancillary fees (bags, seats) for flights in the search results. Use when the user asks about cancellation policies, change fees, baggage costs, or total trip cost.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        airline: { type: "string", description: "Filter by airline name." },
+        cabin: { type: "string", description: "Filter by cabin class: economy, business, first." },
+      },
+      required: [] as string[],
+    },
+  },
 ]

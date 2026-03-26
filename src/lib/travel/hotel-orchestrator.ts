@@ -277,7 +277,7 @@ export async function searchHotels(
           serpApiResults = hotels
           sources.push("serpapi")
         })
-        .catch(() => { /* SerpAPI failed — continue with other sources */ }),
+        .catch((err) => { console.warn(`[hotels] SerpAPI failed: ${(err as Error).message}`) }),
     )
   }
 
@@ -291,14 +291,17 @@ export async function searchHotels(
       )
       roameLiveResults = hotels.map(roameLiveToUnified)
       sources.push("roame")
-    })().catch(() => {
-      // Live failed — fall back to static hotel-data.json
+    })().catch((err) => {
+      console.warn(`[hotels] Roame Live failed: ${(err as Error).message} — falling back to static`)
       return searchRoameHotels(config.query)
         .then((hotels) => {
           roameStaticResults = hotels
+          console.log(`[hotels] Roame static fallback: ${hotels.length} matches for "${config.query}"`)
           if (!sources.includes("roame")) sources.push("roame")
         })
-        .catch(() => { /* Static also failed — continue */ })
+        .catch((err2) => {
+          console.warn(`[hotels] Roame static also failed: ${(err2 as Error).message}`)
+        })
     }),
   )
 
@@ -318,14 +321,19 @@ export async function searchHotels(
 
   let merged: UnifiedHotelResult[]
 
+  console.log(`[hotels] Results: serpapi=${serpApiResults.length}, roameLive=${roameLiveResults.length}, roameStatic=${roameStaticResults.length}, atf=${atfResults.length}`)
+
   if (roameLiveResults.length > 0) {
     // Live Roame results are already complete — merge with SerpAPI for reviews/ratings
     merged = mergeLiveWithSerpApi(roameLiveResults, serpApiResults, atfResults)
+    console.log(`[hotels] Used Roame Live path: ${merged.length} hotels, ${merged.filter(h => h.pointsPerNight).length} with points`)
   } else {
     // Fallback: SerpAPI base + static Roame enrichment
     merged = mergePointsData(serpApiResults, roameStaticResults, atfResults)
+    const withPoints = merged.filter(h => h.pointsPerNight).length
     const existingNames = new Set(merged.map((h) => h.name))
     merged = addPointsOnlyHotels(merged, roameStaticResults, existingNames, 10)
+    console.log(`[hotels] Used fallback path: ${merged.length} hotels, ${withPoints} matched points from static, ${merged.length - serpApiResults.length} points-only added`)
   }
 
   const result: HotelDashboardResults = {

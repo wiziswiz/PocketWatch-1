@@ -4,7 +4,7 @@
  */
 
 import { db } from "@/lib/db"
-import { getFlightSearchSummary, getFlightResults } from "./flight-tools"
+import { getFlightSearchSummary, getFlightResults, generatePriceMatchEmail, analyzeFareDetails } from "./flight-tools"
 
 type ToolInput = Record<string, unknown>
 
@@ -30,6 +30,10 @@ export async function executeTool(name: string, input: ToolInput, userId: string
       return getFlightSearchSummary(userId)
     case "get_flight_results":
       return getFlightResults(userId, input)
+    case "generate_price_match_email":
+      return generatePriceMatchEmail(userId, input)
+    case "analyze_fare_details":
+      return analyzeFareDetails(userId, input)
     default:
       return JSON.stringify({ error: `Unknown tool: ${name}` })
   }
