@@ -41,7 +41,22 @@ export interface RebuildSummary {
   customCategoriesCreated: number
   batchesCompleted: number
   batchesFailed: number
+  failedMerchants?: string[]
   durationMs: number
+  qualityCheck?: {
+    totalTransactions: number
+    categorized: number
+    uncategorized: number
+    categorizedPct: number
+    incomeCount: number
+    incomeTotal: number
+    transferCount: number
+    topCategories: Array<{ category: string; count: number; total: number }>
+    duplicateRules: number
+    orphanedRules: number
+    issues: string[]
+    grade: "A" | "B" | "C" | "D" | "F"
+  }
 }
 
 interface AIRebuildState {
@@ -220,6 +235,13 @@ export function useAIRebuild() {
               setState((prev) => ({
                 ...prev,
                 processedMerchants: [...prev.processedMerchants, ...(data.results as ProcessedMerchant[])],
+              }))
+              break
+            case "quality_check":
+              // Quality check data arrives before complete — merge into summary
+              setState((prev) => ({
+                ...prev,
+                summary: prev.summary ? { ...prev.summary, qualityCheck: data.qualityCheck } : prev.summary,
               }))
               break
             case "complete":

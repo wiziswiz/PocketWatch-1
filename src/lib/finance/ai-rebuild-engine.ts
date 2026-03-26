@@ -25,6 +25,21 @@ export interface RebuildBatchResult {
   error: string | null
 }
 
+export interface QualityCheck {
+  totalTransactions: number
+  categorized: number
+  uncategorized: number
+  categorizedPct: number
+  incomeCount: number
+  incomeTotal: number
+  transferCount: number
+  topCategories: Array<{ category: string; count: number; total: number }>
+  duplicateRules: number
+  orphanedRules: number
+  issues: string[]
+  grade: "A" | "B" | "C" | "D" | "F"
+}
+
 export interface RebuildSummary {
   totalMerchants: number
   totalTxCategorized: number
@@ -35,6 +50,7 @@ export interface RebuildSummary {
   batchesFailed: number
   failedMerchants: string[]
   durationMs: number
+  qualityCheck?: QualityCheck
 }
 
 export type SSESend = (event: string, data: unknown) => void
@@ -187,8 +203,100 @@ export async function runRebuildBatches(
     durationMs: Date.now() - start,
   }
 
+  // Post-rebuild quality check
+  send("progress", { batchIndex: totalBatches, totalBatches, merchantsProcessed, totalMerchants: merchants.length, message: "Running quality check..." })
+  const qualityCheck = await runQualityCheck(userId)
+  summary.qualityCheck = qualityCheck
+  send("quality_check", { qualityCheck })
+
   send("complete", { summary })
   return summary
+}
+
+// ─── Post-Rebuild Quality Check ─────────────────────────────────
+
+async function runQualityCheck(userId: string): Promise<QualityCheck> {
+  const issues: string[] = []
+
+  // Count categorized vs uncategorized
+  const [total, uncategorized] = await Promise.all([
+    db.financeTransaction.count({ where: { userId, isDuplicate: false } }),
+    db.financeTransaction.count({ where: { userId, isDuplicate: false, OR: [{ category: null }, { category: "Uncategorized" }] } }),
+  ])
+  const categorized = total - uncategorized
+  const categorizedPct = total > 0 ? Math.round((categorized / total) * 100) : 0
+
+  if (categorizedPct < 90) issues.push(`Only ${categorizedPct}% categorized (target: 95%+)`)
+  if (uncategorized > 50) issues.push(`${uncategorized} transactions still uncategorized`)
+
+  // Check income classification
+  const [incomeAgg, transferAgg] = await Promise.all([
+    db.financeTransaction.aggregate({ where: { userId, isDuplicate: false, category: "Income" }, _count: true, _sum: { amount: true } }),
+    db.financeTransaction.aggregate({ where: { userId, isDuplicate: false, category: "Transfer" }, _count: true, _sum: { amount: true } }),
+  ])
+
+  const incomeCount = incomeAgg._count
+  const incomeTotal = Math.abs(incomeAgg._sum.amount ?? 0)
+  const transferCount = transferAgg._count
+
+  if (incomeCount === 0) issues.push("No income transactions found — payroll may be miscategorized")
+  if (incomeTotal < 500 && total > 100) issues.push(`Income total is only $${incomeTotal.toFixed(2)} — suspiciously low`)
+
+  // Top categories
+  const catGroups = await db.financeTransaction.groupBy({
+    by: ["category"],
+    where: { userId, isDuplicate: false, category: { not: null } },
+    _count: { _all: true },
+    _sum: { amount: true },
+    orderBy: { _sum: { amount: "desc" } },
+    take: 8,
+  })
+  const topCategories = catGroups.map((g) => ({
+    category: g.category ?? "Unknown",
+    count: g._count._all,
+    total: Math.round((g._sum?.amount ?? 0) * 100) / 100,
+  }))
+
+  // Check for duplicate rules (same matchValue)
+  const rules = await db.financeCategoryRule.findMany({
+    where: { userId },
+    select: { matchValue: true },
+  })
+  const ruleValues = rules.map((r) => r.matchValue.toLowerCase())
+  const duplicateRules = ruleValues.length - new Set(ruleValues).size
+
+  if (duplicateRules > 10) issues.push(`${duplicateRules} duplicate categorization rules`)
+
+  // Check for orphaned rules (rules for categories that don't exist)
+  const validCats = new Set(Object.keys(CATEGORIES))
+  const customCats = await db.financeCustomCategory.findMany({ where: { userId }, select: { label: true } })
+  for (const c of customCats) validCats.add(c.label)
+  const allRules = await db.financeCategoryRule.findMany({ where: { userId }, select: { category: true } })
+  const orphanedRules = allRules.filter((r) => !validCats.has(r.category)).length
+
+  if (orphanedRules > 5) issues.push(`${orphanedRules} rules point to non-existent categories`)
+
+  // Grade
+  let grade: QualityCheck["grade"] = "A"
+  if (categorizedPct < 70 || incomeCount === 0) grade = "F"
+  else if (categorizedPct < 80 || issues.length >= 4) grade = "D"
+  else if (categorizedPct < 90 || issues.length >= 2) grade = "C"
+  else if (categorizedPct < 95 || issues.length >= 1) grade = "B"
+
+  return {
+    totalTransactions: total,
+    categorized,
+    uncategorized,
+    categorizedPct,
+    incomeCount,
+    incomeTotal: Math.round(incomeTotal * 100) / 100,
+    transferCount,
+    topCategories,
+    duplicateRules,
+    orphanedRules,
+    issues,
+    grade,
+  }
 }
 
 // ─── Internal ──────────────────────────────────────────────────

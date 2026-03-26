@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils"
 import { getCategoryMeta } from "@/lib/finance/categories"
 import { useAIRebuild, type ProcessedMerchant } from "@/hooks/finance/use-ai-rebuild"
 import { useReviewCount } from "@/hooks/use-finance"
+import type { QualityCheck } from "@/lib/finance/ai-rebuild-engine"
+import { formatCurrency } from "@/lib/utils"
 
 interface AIRebuildPanelProps {
   uncategorizedCount: number
@@ -212,6 +214,12 @@ export function AIRebuildPanel({ uncategorizedCount }: AIRebuildPanelProps) {
             Done
           </button>
         </div>
+
+        {/* Quality Check Results */}
+        {s.qualityCheck && (
+          <QualityCheckCard check={s.qualityCheck} />
+        )}
+
         <MerchantResultsList merchants={state.processedMerchants} />
       </div>
     )
@@ -261,6 +269,95 @@ function StatBox({ label, value }: { label: string; value: number }) {
     <div className="bg-background-secondary rounded-xl p-3 text-center">
       <p className="text-lg font-bold text-foreground tabular-nums">{value}</p>
       <p className="text-[10px] text-foreground-muted">{label}</p>
+    </div>
+  )
+}
+
+const GRADE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  A: { bg: "bg-success/10", text: "text-success", border: "border-success/30" },
+  B: { bg: "bg-primary/10", text: "text-primary", border: "border-primary/30" },
+  C: { bg: "bg-amber-500/10", text: "text-amber-500", border: "border-amber-500/30" },
+  D: { bg: "bg-orange-500/10", text: "text-orange-500", border: "border-orange-500/30" },
+  F: { bg: "bg-error/10", text: "text-error", border: "border-error/30" },
+}
+
+function QualityCheckCard({ check }: { check: QualityCheck }) {
+  const g = GRADE_COLORS[check.grade] ?? GRADE_COLORS.C
+
+  return (
+    <div className={cn("bg-card border rounded-xl p-5 space-y-4", g.border)}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="material-symbols-rounded text-foreground-muted" style={{ fontSize: 18 }}>verified</span>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Data Quality Check</p>
+            <p className="text-xs text-foreground-muted">Post-rebuild verification</p>
+          </div>
+        </div>
+        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-lg font-black", g.bg, g.text)}>
+          {check.grade}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-background-secondary rounded-lg p-3 text-center">
+          <p className="text-lg font-bold text-foreground tabular-nums">{check.categorizedPct}%</p>
+          <p className="text-[10px] text-foreground-muted">Categorized</p>
+        </div>
+        <div className="bg-background-secondary rounded-lg p-3 text-center">
+          <p className="text-lg font-bold text-foreground tabular-nums">{check.incomeCount}</p>
+          <p className="text-[10px] text-foreground-muted">Income Txns</p>
+        </div>
+        <div className="bg-background-secondary rounded-lg p-3 text-center">
+          <p className="text-lg font-bold text-foreground tabular-nums">{formatCurrency(check.incomeTotal)}</p>
+          <p className="text-[10px] text-foreground-muted">Total Income</p>
+        </div>
+        <div className="bg-background-secondary rounded-lg p-3 text-center">
+          <p className="text-lg font-bold text-foreground tabular-nums">{check.uncategorized}</p>
+          <p className="text-[10px] text-foreground-muted">Uncategorized</p>
+        </div>
+      </div>
+
+      {check.topCategories.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold text-foreground-muted uppercase tracking-widest mb-2">Top Categories</p>
+          <div className="space-y-1">
+            {check.topCategories.slice(0, 5).map((c) => {
+              const meta = getCategoryMeta(c.category)
+              return (
+                <div key={c.category} className="flex items-center justify-between text-xs py-1">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-rounded" style={{ fontSize: 13, color: meta.hex }}>{meta.icon}</span>
+                    <span className="text-foreground">{c.category}</span>
+                  </div>
+                  <div className="flex items-center gap-3 tabular-nums">
+                    <span className="text-foreground-muted">{c.count} txns</span>
+                    <span className="font-medium text-foreground">{formatCurrency(Math.abs(c.total))}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {check.issues.length > 0 && (
+        <div className="space-y-1.5">
+          {check.issues.map((issue, i) => (
+            <div key={i} className="flex items-start gap-2 text-xs text-amber-500">
+              <span className="material-symbols-rounded shrink-0 mt-0.5" style={{ fontSize: 13 }}>warning</span>
+              {issue}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {check.issues.length === 0 && (
+        <p className="text-xs text-success flex items-center gap-1.5">
+          <span className="material-symbols-rounded" style={{ fontSize: 14 }}>check_circle</span>
+          No issues detected — data looks clean
+        </p>
+      )}
     </div>
   )
 }
