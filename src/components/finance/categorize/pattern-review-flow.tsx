@@ -19,7 +19,13 @@ export function PatternReviewFlow() {
   const { data, isLoading, refetch } = useReviewQueue(offset)
   const confirmReview = useConfirmReview()
 
-  // Sync the review count badge when queue is empty (fixes stale badge showing 9+ when queue is 0)
+  // Force fresh data on mount — prevents stale "All caught up" after AI rebuild
+  useEffect(() => {
+    refetch()
+    qc.invalidateQueries({ queryKey: financeKeys.reviewCount() })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync the review count badge when queue is empty
   useEffect(() => {
     if (!isLoading && data && data.transactions.length === 0 && data.total === 0) {
       qc.invalidateQueries({ queryKey: financeKeys.reviewCount() })

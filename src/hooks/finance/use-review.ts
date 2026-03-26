@@ -50,12 +50,12 @@ export function useReviewCount() {
   })
 }
 
-/** Paginated review queue */
+/** Paginated review queue — always fresh since review data changes frequently */
 export function useReviewQueue(offset = 0) {
   return useQuery({
     queryKey: financeKeys.reviewQueue(offset),
     queryFn: () => financeFetch<ReviewResponse>(`/transactions/review?limit=20&offset=${offset}`),
-    staleTime: 15_000,
+    staleTime: 0,
   })
 }
 
