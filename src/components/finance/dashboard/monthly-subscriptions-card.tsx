@@ -34,7 +34,10 @@ function calcMonthlyBurn(subs: Sub[]): number {
       case "weekly": return sum + s.amount * Math.round(weeksInMonth)
       case "biweekly": return sum + s.amount * Math.round(weeksInMonth / 2)
       case "monthly": return sum + s.amount
-      default: return sum
+      case "quarterly": return sum + s.amount / 3
+      case "semi_annual": return sum + s.amount / 6
+      case "yearly": return sum + s.amount / 12
+      default: return sum + s.amount
     }
   }, 0)
 }

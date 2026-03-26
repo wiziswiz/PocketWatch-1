@@ -187,17 +187,24 @@ export async function computeDeepInsights(userId: string): Promise<DeepInsightsR
   const activeSubs = subs.filter((s) => s.status === "active")
   const unwantedSubs = activeSubs.filter((s) => !s.isWanted)
   const toMonthly = (sub: { amount: number; frequency: string }) => {
-    switch (sub.frequency) { case "weekly": return sub.amount * 4.33; case "quarterly": return sub.amount / 3; case "yearly": return sub.amount / 12; default: return sub.amount }
+    switch (sub.frequency) {
+      case "weekly": return sub.amount * 4.33
+      case "biweekly": return sub.amount * 2.17
+      case "monthly": return sub.amount
+      case "quarterly": return sub.amount / 3
+      case "semi_annual": return sub.amount / 6
+      case "yearly": return sub.amount / 12
+      default: return sub.amount
+    }
   }
   const monthlySubTotal = activeSubs.reduce((s, sub) => s + toMonthly(sub), 0)
   const trueSubs = activeSubs.filter((s) => s.billType === "subscription" || !s.billType)
   const monthlySubsOnly = trueSubs.reduce((s, sub) => s + toMonthly(sub), 0)
   const subscriptionSummary = { monthlyTotal: round(monthlySubTotal), monthlySubsOnly: round(monthlySubsOnly), activeCount: activeSubs.length, unwantedCount: unwantedSubs.length, potentialSavings: round(unwantedSubs.reduce((s, sub) => s + sub.amount, 0)) }
 
-  // Frequent merchants
+  // Frequent merchants — use realSpendTxs to exclude transfers/investments
   const merchantFreq = new Map<string, { count: number; total: number; category: string | null; logoUrl: string | null }>()
-  for (const tx of txs) {
-    if (tx.amount <= 0) continue
+  for (const tx of realSpendTxs) {
     const name = tx.merchantName ?? tx.name
     const entry = merchantFreq.get(name) ?? { count: 0, total: 0, category: null, logoUrl: null }
     entry.count++; entry.total += tx.amount; entry.category = tx.category
@@ -207,7 +214,8 @@ export async function computeDeepInsights(userId: string): Promise<DeepInsightsR
   const frequentMerchants = [...merchantFreq.entries()].sort((a, b) => b[1].count - a[1].count).slice(0, 10)
     .map(([name, data]) => ({ name, count: data.count, total: round(data.total), category: data.category, logoUrl: data.logoUrl }))
 
-  const largestPurchases = txs.filter((t) => t.amount > 0).sort((a, b) => b.amount - a.amount).slice(0, 5)
+  // Largest purchases — only real spending, not transfers
+  const largestPurchases = realSpendTxs.sort((a, b) => b.amount - a.amount).slice(0, 5)
     .map((tx) => ({ id: tx.id, name: tx.merchantName ?? tx.name, amount: round(tx.amount), date: tx.date.toISOString().slice(0, 10), category: tx.category, logoUrl: tx.logoUrl }))
 
   const uncategorizedPreview = uncategorizedPreviewRaw.map((t) => ({
@@ -238,8 +246,13 @@ export async function computeDeepInsights(userId: string): Promise<DeepInsightsR
     return { category, currentTotal: round(data.total), previousTotal: round(prevTotal), changePercent: change, direction: change === null ? "new" : change > 5 ? "up" : change < -5 ? "down" : "flat" }
   }).sort((a, b) => b.currentTotal - a.currentTotal)
 
+  // Income sources — only count "Income" category, not all negative amounts
   const incomeBySource = new Map<string, number>()
-  for (const tx of txs) { if (tx.amount >= 0) continue; incomeBySource.set(tx.merchantName ?? tx.name ?? "Unknown", (incomeBySource.get(tx.merchantName ?? tx.name ?? "Unknown") ?? 0) + Math.abs(tx.amount)) }
+  for (const tx of txs) {
+    if (tx.amount >= 0 || (tx.category ?? "").toLowerCase() !== "income") continue
+    const name = tx.merchantName ?? tx.name ?? "Unknown"
+    incomeBySource.set(name, (incomeBySource.get(name) ?? 0) + Math.abs(tx.amount))
+  }
   const incomeSources = [...incomeBySource.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, amount]) => ({ name, amount: round(amount) }))
 
   return {

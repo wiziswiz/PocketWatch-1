@@ -75,9 +75,10 @@ export async function GET() {
             _sum: { amount: true },
           })
         : Promise.resolve({ _sum: { amount: null } }),
+      // Exclude transfers/income from top merchants (Wealthfront, CC payments shouldn't appear)
       db.financeTransaction.groupBy({
         by: ["merchantName"],
-        where: { ...baseWhere, date: { gte: thisMonthStart, lt: thisMonthEnd }, amount: { gt: 0 }, merchantName: { not: null } },
+        where: { ...baseWhere, date: { gte: thisMonthStart, lt: thisMonthEnd }, amount: { gt: 0 }, merchantName: { not: null }, category: { notIn: ["Transfer", "Income", "Investment", "Crypto"] } },
         _sum: { amount: true },
         _count: true,
         orderBy: { _sum: { amount: "desc" } },

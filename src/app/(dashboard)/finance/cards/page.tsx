@@ -166,11 +166,15 @@ export default function FinanceCardsPage() {
   const allSubs = subs?.subscriptions ?? []
   const monthlyBillsTotal = allSubs.filter((s: { status: string }) => s.status === "active")
     .reduce((sum: number, s: { frequency: string; amount: number }) => {
-      if (s.frequency === "monthly") return sum + s.amount
-      if (s.frequency === "yearly") return sum + s.amount / 12
-      if (s.frequency === "quarterly") return sum + s.amount / 3
-      if (s.frequency === "weekly") return sum + s.amount * 4.33
-      return sum
+      switch (s.frequency) {
+        case "weekly": return sum + s.amount * 4.33
+        case "biweekly": return sum + s.amount * 2.17
+        case "monthly": return sum + s.amount
+        case "quarterly": return sum + s.amount / 3
+        case "semi_annual": return sum + s.amount / 6
+        case "yearly": return sum + s.amount / 12
+        default: return sum + s.amount
+      }
     }, 0)
 
   const allBills = billsData?.bills ?? []

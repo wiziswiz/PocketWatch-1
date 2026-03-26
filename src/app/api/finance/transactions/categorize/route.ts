@@ -74,6 +74,9 @@ export async function POST() {
       invalidateCache(`deep-insights:${user.id}`)
       invalidateCache(`budget-suggest:${user.id}`)
       invalidateCache(`budget-ai:${user.id}`)
+      invalidateCache(`finance-insights:${user.id}`)
+      invalidateCache(`finance-spending-by-month:${user.id}`)
+      invalidateCache(`finance-trends:${user.id}`)
     }
 
     const remaining = await db.financeTransaction.count({ where })
