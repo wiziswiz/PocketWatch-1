@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { formatCurrency, cn } from "@/lib/utils"
+import { ScrollHintWrapper } from "@/components/ui/scroll-hint-wrapper"
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -174,7 +175,7 @@ export function InvestmentHoldingsTable({ holdings, totalValue }: Props) {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <ScrollHintWrapper>
         <table className="w-full text-sm min-w-[480px] sm:min-w-[700px]">
           <thead>
             <tr className="border-b border-card-border/30">
@@ -300,7 +301,7 @@ export function InvestmentHoldingsTable({ holdings, totalValue }: Props) {
             })}
           </tbody>
         </table>
-      </div>
+      </ScrollHintWrapper>
 
       {sorted.length === 0 && (
         <div className="py-12 text-center">
