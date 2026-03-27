@@ -82,9 +82,9 @@ export function useDeleteNotificationChannel() {
 
 export function useTestNotification() {
   return useMutation({
-    mutationFn: () =>
+    mutationFn: (channel?: string) =>
       notifyFetch<{ sent: number; total: number; results: Array<{ channel: string; sent: boolean; error?: string }> }>(
-        "/test",
+        `/test${channel ? `?channel=${channel}` : ""}`,
         { method: "POST" },
       ),
   })
