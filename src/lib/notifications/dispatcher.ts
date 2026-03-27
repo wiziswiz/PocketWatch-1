@@ -158,7 +158,7 @@ export async function sendWithPreferences(
   if (brrrKey && severityPasses(severity, channelSeverity["brrr"] ?? "info")) {
     tasks.push(tryChannel("brrr", sendBrrr, userId, payload))
   }
-  if (telegramKey && severityPasses(severity, channelSeverity["telegram"] ?? "urgent")) {
+  if (telegramKey && severityPasses(severity, channelSeverity["telegram"] ?? "watch")) {
     tasks.push(tryChannel("telegram", sendTelegram, userId, payload))
   }
   if (ntfyKey2 && severityPasses(severity, channelSeverity["ntfy"] ?? "info")) {

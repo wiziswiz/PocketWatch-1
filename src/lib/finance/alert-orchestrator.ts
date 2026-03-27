@@ -16,6 +16,27 @@ function formatAlertPayload(alert: NewAlert) {
   }
 }
 
+/** Map alert types to severity so channels with thresholds route correctly. */
+function alertSeverity(alert: NewAlert): "info" | "watch" | "urgent" {
+  switch (alert.alertType) {
+    case "double_charge":
+      return "urgent"
+    case "budget_warning":
+      // "Budget Exceeded" = urgent, "Budget Warning" (80%) = watch
+      return alert.title.includes("Exceeded") ? "urgent" : "watch"
+    case "large_transaction":
+    case "bill_reminder":
+    case "unusual_spend":
+    case "price_change":
+      return "watch"
+    case "refund":
+    case "deposit":
+    case "income":
+    default:
+      return "info"
+  }
+}
+
 /**
  * Detect financial events and send notifications.
  * Returns count of alerts sent.
@@ -34,7 +55,7 @@ export async function detectAndNotify(userId: string): Promise<{ alertsSent: num
       ...payload,
       category: "finance",
       alertType: event.alertType,
-      severity: "info",
+      severity: alertSeverity(event),
       metadata: event.metadata as Record<string, unknown> | undefined,
     })
     const sentChannels = results.filter((r) => r.sent).map((r) => r.channel)

@@ -63,7 +63,7 @@ async function detectRefundsAndDeposits(userId: string): Promise<NewAlert[]> {
     where: {
       userId,
       transactionId: { in: credits.map((c) => c.id) },
-      alertType: { in: ["refund", "deposit"] },
+      alertType: { in: ["refund", "deposit", "income"] },
     },
     select: { transactionId: true },
   })
@@ -93,7 +93,21 @@ async function detectRefundsAndDeposits(userId: string): Promise<NewAlert[]> {
     const creditMerchant = cleanMerchantName(credit.merchantName ?? credit.name)
     const absAmount = Math.abs(credit.amount)
 
-    // Skip non-spending categories for refund matching
+    // Income category → specific "Income Received" alert
+    if (credit.category === "Income") {
+      alerts.push({
+        alertType: "income",
+        title: "Income Received",
+        message: `${fmtUSD(absAmount)} from ${creditMerchant || credit.name}`,
+        amount: absAmount,
+        merchantName: creditMerchant || credit.merchantName || credit.name,
+        transactionId: credit.id,
+        metadata: { category: credit.category, accountId: credit.accountId, date: credit.date.toISOString(), paymentChannel: credit.paymentChannel },
+      })
+      continue
+    }
+
+    // Skip other non-spending categories for refund matching
     if (credit.category && NON_SPENDING_CATEGORIES.has(credit.category)) {
       alerts.push({
         alertType: "deposit",
@@ -362,17 +376,74 @@ async function detectLargeTransactions(userId: string): Promise<NewAlert[]> {
     })
 }
 
+// ─── Unusual Spend Detection ─────────────────────────────────
+
+async function detectUnusualSpend(userId: string): Promise<NewAlert[]> {
+  const now = new Date()
+  const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+
+  // Already alerted today?
+  const existing = await db.financeAlert.findFirst({
+    where: { userId, alertType: "unusual_spend", sentAt: { gte: todayStart } },
+    select: { id: true },
+  })
+  if (existing) return []
+
+  // Today's spending
+  const todaySpend = await db.financeTransaction.aggregate({
+    where: {
+      userId,
+      isExcluded: false,
+      isDuplicate: false,
+      date: { gte: todayStart },
+      amount: { gt: 0 },
+      category: { notIn: [...NON_SPENDING_CATEGORIES] },
+    },
+    _sum: { amount: true },
+  })
+  const todayTotal = todaySpend._sum.amount ?? 0
+  if (todayTotal < 50) return [] // skip trivial amounts
+
+  // Compare to 30-day daily average
+  const thirtyDaysAgo = new Date(todayStart.getTime() - 30 * 24 * 60 * 60 * 1000)
+  const historicalSpend = await db.financeTransaction.aggregate({
+    where: {
+      userId,
+      isExcluded: false,
+      isDuplicate: false,
+      date: { gte: thirtyDaysAgo, lt: todayStart },
+      amount: { gt: 0 },
+      category: { notIn: [...NON_SPENDING_CATEGORIES] },
+    },
+    _sum: { amount: true },
+  })
+  const historicalTotal = historicalSpend._sum.amount ?? 0
+  const dailyAvg = historicalTotal / 30
+
+  if (dailyAvg <= 0 || todayTotal < dailyAvg * UNUSUAL_SPEND_MULTIPLIER) return []
+
+  const multiplier = Math.round((todayTotal / dailyAvg) * 10) / 10
+  return [{
+    alertType: "unusual_spend",
+    title: "Unusual Spending Day",
+    message: `${fmtUSD(todayTotal)} today — ${multiplier}x your daily average of ${fmtUSD(dailyAvg)}`,
+    amount: todayTotal,
+    metadata: { dailyAvg, multiplier, date: todayStart.toISOString() },
+  }]
+}
+
 // ─── Main Entry Point ─────────────────────────────────────────
 
 export async function detectFinancialEvents(userId: string): Promise<NewAlert[]> {
-  const [refundsDeposits, doubleCharges, budgetWarnings, billReminders, largeTx] =
+  const [refundsDeposits, doubleCharges, budgetWarnings, billReminders, largeTx, unusualSpend] =
     await Promise.all([
       detectRefundsAndDeposits(userId),
       detectDoubleCharges(userId),
       detectBudgetWarnings(userId),
       detectBillReminders(userId),
       detectLargeTransactions(userId),
+      detectUnusualSpend(userId),
     ])
 
-  return [...refundsDeposits, ...doubleCharges, ...budgetWarnings, ...billReminders, ...largeTx]
+  return [...refundsDeposits, ...doubleCharges, ...budgetWarnings, ...billReminders, ...largeTx, ...unusualSpend]
 }
