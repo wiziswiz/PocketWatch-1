@@ -12,10 +12,12 @@ import { usePushNotifications } from "@/hooks/use-push-notifications"
 
 // ─── Channel Config Forms ────────────────────────────────────
 
-function BrrrChannelCard({ configured, onSave, onDelete }: {
+function BrrrChannelCard({ configured, onSave, onDelete, onTest, isTesting }: {
   configured: boolean
   onSave: (url: string) => void
   onDelete: () => void
+  onTest: () => void
+  isTesting: boolean
 }) {
   const [url, setUrl] = useState("")
   const [editing, setEditing] = useState(false)
@@ -62,16 +64,21 @@ function BrrrChannelCard({ configured, onSave, onDelete }: {
         <div className="mt-2 flex gap-2">
           <button onClick={() => setEditing(true)} className="text-xs text-primary hover:underline">Update</button>
           <button onClick={onDelete} className="text-xs text-error hover:underline">Remove</button>
+          <button onClick={onTest} disabled={isTesting} className="text-xs text-foreground-muted hover:text-foreground disabled:opacity-50">
+            {isTesting ? "Sending..." : "Test"}
+          </button>
         </div>
       )}
     </div>
   )
 }
 
-function TelegramChannelCard({ configured, onSave, onDelete }: {
+function TelegramChannelCard({ configured, onSave, onDelete, onTest, isTesting }: {
   configured: boolean
   onSave: (botToken: string, chatId: string) => void
   onDelete: () => void
+  onTest: () => void
+  isTesting: boolean
 }) {
   const [botToken, setBotToken] = useState("")
   const [chatId, setChatId] = useState("")
@@ -132,6 +139,9 @@ function TelegramChannelCard({ configured, onSave, onDelete }: {
         <div className="mt-2 flex gap-2">
           <button onClick={() => setEditing(true)} className="text-xs text-primary hover:underline">Update</button>
           <button onClick={onDelete} className="text-xs text-error hover:underline">Remove</button>
+          <button onClick={onTest} disabled={isTesting} className="text-xs text-foreground-muted hover:text-foreground disabled:opacity-50">
+            {isTesting ? "Sending..." : "Test"}
+          </button>
         </div>
       )}
     </div>
@@ -213,6 +223,17 @@ export function NotificationSettings() {
     )
   }
 
+  const handleTestChannel = (channel: string) => {
+    testMutation.mutate(channel, {
+      onSuccess: (res) => {
+        const result = res.results[0]
+        if (result?.sent) toast.success(`${channel} test sent!`)
+        else toast.error(`${channel} test failed${result?.error ? `: ${result.error}` : ""}`)
+      },
+      onError: (e) => toast.error(e.message),
+    })
+  }
+
   const handleTest = async () => {
     // If no channels configured and web push is available, auto-enable it first
     if (!hasAnyChannel && push.isSupported && !push.isSubscribed) {
@@ -240,8 +261,8 @@ export function NotificationSettings() {
   return (
     <div className="p-4 space-y-4">
       <div className="space-y-3">
-        <BrrrChannelCard configured={brrrConfigured} onSave={handleSaveBrrr} onDelete={() => deleteMutation.mutate("notify_brrr", { onSuccess: () => toast.success("brrr.now removed") })} />
-        <TelegramChannelCard configured={telegramConfigured} onSave={handleSaveTelegram} onDelete={() => deleteMutation.mutate("notify_telegram", { onSuccess: () => toast.success("Telegram removed") })} />
+        <BrrrChannelCard configured={brrrConfigured} onSave={handleSaveBrrr} onDelete={() => deleteMutation.mutate("notify_brrr", { onSuccess: () => toast.success("brrr.now removed") })} onTest={() => handleTestChannel("brrr")} isTesting={testMutation.isPending} />
+        <TelegramChannelCard configured={telegramConfigured} onSave={handleSaveTelegram} onDelete={() => deleteMutation.mutate("notify_telegram", { onSuccess: () => toast.success("Telegram removed") })} onTest={() => handleTestChannel("telegram")} isTesting={testMutation.isPending} />
         <WebPushChannelCard />
       </div>
 
