@@ -39,11 +39,17 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Dashboard routes (auth check)
+    // Dashboard routes (auth check + CSRF cookie)
     "/portfolio/:path*",
     "/finance/:path*",
     "/net-worth/:path*",
     "/tracker/:path*",
+    "/settings/:path*",
+    "/settings",
+    "/chat/:path*",
+    "/chat",
+    "/travel/:path*",
+    "/travel",
     // API routes (CSRF check)
     "/api/:path*",
   ],
