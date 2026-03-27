@@ -6,7 +6,7 @@
 import cron from "node-cron"
 
 const PORT = process.env.PORT ?? "3500"
-const BASE_URL = `http://localhost:${PORT}`
+const BASE_URL = process.env.INTERNAL_BASE_URL ?? `http://localhost:${PORT}`
 
 interface JobConfig {
   readonly name: string

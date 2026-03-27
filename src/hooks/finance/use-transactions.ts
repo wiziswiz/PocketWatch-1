@@ -157,13 +157,11 @@ export function useUpdateTransactionCategory() {
 export function useBulkCategorize() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: {
-      transactionIds: string[]
-      category?: string
-      subcategory?: string
-      isExcluded?: boolean
-      tags?: string[]
-    }) => financeFetch("/transactions/bulk", { method: "POST", body: JSON.stringify(data) }),
+    mutationFn: (data: { ids: string[]; category: string; createRule?: boolean }) =>
+      financeFetch<{ updated: number }>(
+        "/transactions/bulk-categorize",
+        { method: "POST", body: JSON.stringify(data) }
+      ),
     onSuccess: () => qc.invalidateQueries({ queryKey: financeKeys.all }),
   })
 }
@@ -304,3 +302,4 @@ export function useApplyAIAudit() {
     onSuccess: () => qc.invalidateQueries({ queryKey: financeKeys.all }),
   })
 }
+

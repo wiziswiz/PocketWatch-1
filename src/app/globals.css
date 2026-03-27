@@ -1445,6 +1445,31 @@ html {
   display: none;
 }
 
+/* ─── Scroll hint — fade edges on overflowing tables ─── */
+.scroll-hint {
+  position: relative;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scroll-hint::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 32px;
+  background: linear-gradient(to right, transparent, var(--card));
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.2s;
+}
+
+/* Hide fade when scrolled to the right edge (JS adds this class) */
+.scroll-hint.scrolled-end::after {
+  opacity: 0;
+}
+
 /* ========================================
    MOBILE OPTIMIZATION
    ======================================== */

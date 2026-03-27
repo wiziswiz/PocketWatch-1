@@ -15,6 +15,7 @@ import { TransactionRow } from "@/components/finance/transaction-row"
 import { getCategoryMeta, FINANCE_CATEGORIES } from "@/lib/finance/categories"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { BulkActionBar } from "@/components/finance/bulk-action-bar"
 
 const DATE_PRESETS = [
   { key: "this-month", label: "This Month" },
@@ -58,6 +59,7 @@ export default function FinanceTransactionsPage() {
   const [txType, setTxType] = useState("")
   const [customStart, setCustomStart] = useState("")
   const [customEnd, setCustomEnd] = useState("")
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const dates = dateRange === "custom"
     ? { start: customStart || undefined, end: customEnd || undefined }
@@ -278,9 +280,23 @@ export default function FinanceTransactionsPage() {
           <p className="text-sm text-error">Failed to load transactions. Please try again.</p>
         </div>
       ) : data?.transactions.length ? (
+        <>
+        <BulkActionBar selectedIds={selectedIds} onClear={() => setSelectedIds(new Set())} />
         <div className="bg-card border border-card-border rounded-xl overflow-hidden">
           {/* Elevated Header */}
           <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 border-b border-card-border bg-card-elevated text-[10px] text-foreground-muted font-semibold uppercase tracking-widest">
+            <input
+              type="checkbox"
+              className="w-3.5 h-3.5 rounded accent-primary flex-shrink-0"
+              checked={data.transactions.length > 0 && data.transactions.every((tx) => selectedIds.has(tx.id))}
+              onChange={(e) => {
+                const next = new Set(selectedIds)
+                if (e.target.checked) data.transactions.forEach((tx) => next.add(tx.id))
+                else data.transactions.forEach((tx) => next.delete(tx.id))
+                setSelectedIds(next)
+              }}
+              title="Select all on this page"
+            />
             <div className="w-10 sm:w-16">Date</div>
             <div className="flex-1">Description</div>
             <div className="w-28 hidden md:block">Category</div>
@@ -289,6 +305,19 @@ export default function FinanceTransactionsPage() {
           </div>
 
           {data.transactions.map((tx) => (
+            <div key={tx.id} className="flex items-center">
+              <input
+                type="checkbox"
+                className="w-3.5 h-3.5 rounded accent-primary flex-shrink-0 ml-3 sm:ml-4"
+                checked={selectedIds.has(tx.id)}
+                onChange={(e) => {
+                  const next = new Set(selectedIds)
+                  if (e.target.checked) next.add(tx.id)
+                  else next.delete(tx.id)
+                  setSelectedIds(next)
+                }}
+              />
+              <div className="flex-1 min-w-0">
             <TransactionRow
               key={tx.id}
               id={tx.id}
@@ -318,8 +347,11 @@ export default function FinanceTransactionsPage() {
                 })
               }
             />
+              </div>
+            </div>
           ))}
         </div>
+        </>
       ) : (
         <FinanceEmpty
           icon={hasFilters ? "filter_list_off" : "receipt_long"}

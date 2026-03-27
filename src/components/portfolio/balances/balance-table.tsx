@@ -2,6 +2,7 @@ import { formatCryptoAmount, formatFiatValue } from "@/lib/portfolio/utils"
 import { ChainBadge } from "@/components/portfolio/chain-badge"
 import { PortfolioAssetIcon } from "@/components/portfolio/portfolio-asset-icon"
 import { BalanceGroupRows } from "./balance-group-rows"
+import { ScrollHintWrapper } from "@/components/ui/scroll-hint-wrapper"
 import type { AssetGroup, BalanceRow } from "./balances-types"
 
 function SortHeader({
@@ -77,7 +78,7 @@ export function BalanceTable({
 
   return (
     <div className="bg-card border border-card-border rounded-xl overflow-hidden">
-      <div className="overflow-x-auto">
+      <ScrollHintWrapper>
         <table className="w-full">
           <thead>
             <tr className="border-b border-card-border bg-card-elevated">
@@ -147,7 +148,7 @@ export function BalanceTable({
             })}
           </tbody>
         </table>
-      </div>
+      </ScrollHintWrapper>
     </div>
   )
 }

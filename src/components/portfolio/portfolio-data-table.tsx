@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react"
 import { cn } from "@/lib/utils"
+import { ScrollHintWrapper } from "@/components/ui/scroll-hint-wrapper"
 
 /** Wrapper to group a data row + its expanded detail row in tbody */
 function ExpandableRowGroup({ children }: { children: ReactNode }) {
@@ -77,7 +78,7 @@ export function PortfolioDataTable<T>({
   if (isLoading) {
     return (
       <div className="bg-card border border-card-border rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
+        <ScrollHintWrapper>
           <table className={cn("w-full", tableClassName)}>
             <thead>
               <tr className="border-b border-card-border bg-card-elevated">
@@ -101,7 +102,7 @@ export function PortfolioDataTable<T>({
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollHintWrapper>
       </div>
     )
   }
@@ -119,7 +120,7 @@ export function PortfolioDataTable<T>({
 
   return (
     <div className="bg-card border border-card-border rounded-xl overflow-hidden">
-      <div className="overflow-x-auto">
+      <ScrollHintWrapper>
         <table className={cn("w-full", tableClassName)}>
           <thead>
             <tr className="border-b border-card-border bg-card-elevated">
@@ -211,7 +212,7 @@ export function PortfolioDataTable<T>({
             })}
           </tbody>
         </table>
-      </div>
+      </ScrollHintWrapper>
     </div>
   )
 }
