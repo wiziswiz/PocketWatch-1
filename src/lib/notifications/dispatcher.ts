@@ -7,6 +7,7 @@ import { db } from "@/lib/db"
 import { Prisma } from "@/generated/prisma/client"
 import { sendBrrr } from "./channel-brrr"
 import { sendTelegram } from "./channel-telegram"
+import { sendNtfy } from "./channel-ntfy"
 import { sendWebPush } from "./channel-webpush"
 
 export interface NotificationPayload {
@@ -38,9 +39,10 @@ async function tryChannel(name: string, fn: ChannelFn, userId: string, payload: 
  * Send a notification to all configured channels for a specific user.
  */
 export async function sendNotification(userId: string, payload: NotificationPayload): Promise<ChannelResult[]> {
-  const [brrrKey, telegramKey, vapidKeys, pushSubs, pushSubLegacy] = await Promise.all([
+  const [brrrKey, telegramKey, ntfyKey, vapidKeys, pushSubs, pushSubLegacy] = await Promise.all([
     db.externalApiKey.findFirst({ where: { userId, serviceName: "notify_brrr" }, select: { id: true } }),
     db.externalApiKey.findFirst({ where: { userId, serviceName: "notify_telegram" }, select: { id: true } }),
+    db.externalApiKey.findFirst({ where: { userId, serviceName: "notify_ntfy" }, select: { id: true } }),
     db.settings.findUnique({ where: { key: "vapid_keys" }, select: { id: true } }),
     db.settings.findUnique({ where: { key: "push_subscriptions" }, select: { id: true } }),
     db.settings.findUnique({ where: { key: "push_subscription" }, select: { id: true } }),
@@ -50,6 +52,7 @@ export async function sendNotification(userId: string, payload: NotificationPayl
 
   if (brrrKey) tasks.push(tryChannel("brrr", sendBrrr, userId, payload))
   if (telegramKey) tasks.push(tryChannel("telegram", sendTelegram, userId, payload))
+  if (ntfyKey) tasks.push(tryChannel("ntfy", sendNtfy, userId, payload))
   if (vapidKeys && (pushSubs || pushSubLegacy)) tasks.push(tryChannel("webpush", sendWebPush, userId, payload))
 
   if (tasks.length === 0) return []
@@ -141,9 +144,10 @@ export async function sendWithPreferences(
   }
 
   // Determine which channels pass severity threshold
-  const [brrrKey, telegramKey, vapidKeys, pushSubs, pushSubLegacy] = await Promise.all([
+  const [brrrKey, telegramKey, ntfyKey2, vapidKeys, pushSubs, pushSubLegacy] = await Promise.all([
     db.externalApiKey.findFirst({ where: { userId, serviceName: "notify_brrr" }, select: { id: true } }),
     db.externalApiKey.findFirst({ where: { userId, serviceName: "notify_telegram" }, select: { id: true } }),
+    db.externalApiKey.findFirst({ where: { userId, serviceName: "notify_ntfy" }, select: { id: true } }),
     db.settings.findUnique({ where: { key: "vapid_keys" }, select: { id: true } }),
     db.settings.findUnique({ where: { key: "push_subscriptions" }, select: { id: true } }),
     db.settings.findUnique({ where: { key: "push_subscription" }, select: { id: true } }),
@@ -156,6 +160,9 @@ export async function sendWithPreferences(
   }
   if (telegramKey && severityPasses(severity, channelSeverity["telegram"] ?? "urgent")) {
     tasks.push(tryChannel("telegram", sendTelegram, userId, payload))
+  }
+  if (ntfyKey2 && severityPasses(severity, channelSeverity["ntfy"] ?? "info")) {
+    tasks.push(tryChannel("ntfy", sendNtfy, userId, payload))
   }
   if (vapidKeys && (pushSubs || pushSubLegacy) && severityPasses(severity, channelSeverity["webpush"] ?? "watch")) {
     tasks.push(tryChannel("webpush", sendWebPush, userId, payload))
@@ -185,9 +192,10 @@ export async function sendWithPreferences(
  * Get status of all notification channels for a specific user.
  */
 export async function getChannelStatus(userId: string): Promise<Array<{ channel: string; configured: boolean }>> {
-  const [brrrKey, telegramKey, vapidKeys, pushSubs, pushSubLegacy] = await Promise.all([
+  const [brrrKey, telegramKey, ntfyKey, vapidKeys, pushSubs, pushSubLegacy] = await Promise.all([
     db.externalApiKey.findFirst({ where: { userId, serviceName: "notify_brrr" }, select: { id: true } }),
     db.externalApiKey.findFirst({ where: { userId, serviceName: "notify_telegram" }, select: { id: true } }),
+    db.externalApiKey.findFirst({ where: { userId, serviceName: "notify_ntfy" }, select: { id: true } }),
     db.settings.findUnique({ where: { key: "vapid_keys" }, select: { id: true } }),
     db.settings.findUnique({ where: { key: "push_subscriptions" }, select: { id: true } }),
     db.settings.findUnique({ where: { key: "push_subscription" }, select: { id: true } }),
@@ -196,6 +204,7 @@ export async function getChannelStatus(userId: string): Promise<Array<{ channel:
   return [
     { channel: "brrr", configured: !!brrrKey },
     { channel: "telegram", configured: !!telegramKey },
+    { channel: "ntfy", configured: !!ntfyKey },
     { channel: "webpush", configured: !!vapidKeys && !!(pushSubs || pushSubLegacy) },
   ]
 }
