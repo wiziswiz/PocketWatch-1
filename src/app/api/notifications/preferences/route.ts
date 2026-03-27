@@ -17,7 +17,8 @@ const DEFAULT_CATEGORIES: Record<string, boolean> = {
 
 const DEFAULT_CHANNEL_SEVERITY: Record<string, string> = {
   brrr: "info",
-  telegram: "urgent",
+  telegram: "watch",
+  ntfy: "info",
   webpush: "watch",
 }
 
