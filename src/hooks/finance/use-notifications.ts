@@ -62,7 +62,7 @@ export function useVapidKey() {
 export function useSaveNotificationChannel() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (body: { channel: string; webhookUrl?: string; botToken?: string; chatId?: string }) =>
+    mutationFn: (body: { channel: string; webhookUrl?: string; botToken?: string; chatId?: string; topic?: string; serverUrl?: string; token?: string }) =>
       notifyFetch<{ saved: boolean }>("/settings", {
         method: "POST",
         body: JSON.stringify(body),

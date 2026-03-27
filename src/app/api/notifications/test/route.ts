@@ -9,6 +9,7 @@ import { apiError } from "@/lib/api-error"
 import { sendNotification } from "@/lib/notifications/dispatcher"
 import { sendTelegram } from "@/lib/notifications/channel-telegram"
 import { sendBrrr } from "@/lib/notifications/channel-brrr"
+import { sendNtfy } from "@/lib/notifications/channel-ntfy"
 import { sendWebPush } from "@/lib/notifications/channel-webpush"
 import { db } from "@/lib/db"
 import { rateLimiters, getClientId } from "@/lib/rate-limit"
@@ -44,6 +45,8 @@ export async function POST(req: NextRequest) {
           sent = await sendTelegram(user.id, TEST_PAYLOAD)
         } else if (targetChannel === "brrr") {
           sent = await sendBrrr(user.id, TEST_PAYLOAD)
+        } else if (targetChannel === "ntfy") {
+          sent = await sendNtfy(user.id, TEST_PAYLOAD)
         } else if (targetChannel === "webpush") {
           sent = await sendWebPush(user.id, TEST_PAYLOAD)
         } else {

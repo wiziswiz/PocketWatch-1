@@ -14,7 +14,7 @@ import { getChannelStatus } from "@/lib/notifications/dispatcher"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod/v4"
 
-const VALID_CHANNELS = new Set(["notify_brrr", "notify_telegram"])
+const VALID_CHANNELS = new Set(["notify_brrr", "notify_telegram", "notify_ntfy"])
 
 export async function GET() {
   const user = await getCurrentUser()
@@ -32,7 +32,8 @@ export async function GET() {
     const channels = status.map((ch) => {
       const key = keys.find((k) =>
         (ch.channel === "brrr" && k.serviceName === "notify_brrr") ||
-        (ch.channel === "telegram" && k.serviceName === "notify_telegram"),
+        (ch.channel === "telegram" && k.serviceName === "notify_telegram") ||
+        (ch.channel === "ntfy" && k.serviceName === "notify_ntfy"),
       )
       return {
         ...ch,
@@ -74,7 +75,14 @@ const telegramSchema = z.object({
   chatId: z.string().min(1, "Chat ID is required"),
 })
 
-const saveSchema = z.union([brrrSchema, telegramSchema])
+const ntfySchema = z.object({
+  channel: z.literal("notify_ntfy"),
+  topic: z.string().min(1, "Topic is required"),
+  serverUrl: z.string().optional(),
+  token: z.string().optional(),
+})
+
+const saveSchema = z.union([brrrSchema, telegramSchema, ntfySchema])
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser()
@@ -92,10 +100,16 @@ export async function POST(req: NextRequest) {
 
     if (data.channel === "notify_brrr") {
       encryptedValue = await encryptCredential(data.webhookUrl)
-    } else {
+    } else if (data.channel === "notify_telegram") {
       encryptedValue = await encryptCredential(JSON.stringify({
         botToken: data.botToken,
         chatId: data.chatId,
+      }))
+    } else {
+      encryptedValue = await encryptCredential(JSON.stringify({
+        topic: data.topic,
+        serverUrl: data.serverUrl || "https://ntfy.sh",
+        token: data.token || undefined,
       }))
     }
 

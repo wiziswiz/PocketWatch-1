@@ -148,6 +148,92 @@ function TelegramChannelCard({ configured, onSave, onDelete, onTest, isTesting }
   )
 }
 
+function NtfyChannelCard({ configured, onSave, onDelete, onTest, isTesting }: {
+  configured: boolean
+  onSave: (topic: string, serverUrl: string, token: string) => void
+  onDelete: () => void
+  onTest: () => void
+  isTesting: boolean
+}) {
+  const [topic, setTopic] = useState("")
+  const [serverUrl, setServerUrl] = useState("")
+  const [token, setToken] = useState("")
+  const [editing, setEditing] = useState(false)
+
+  return (
+    <div className="p-4 border border-card-border rounded-lg">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="material-symbols-rounded text-foreground-muted">campaign</span>
+          <div>
+            <p className="text-sm font-medium">ntfy.sh</p>
+            <p className="text-xs text-foreground-muted">Free push notifications (iOS / Android / Desktop)</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`w-2 h-2 rounded-full ${configured ? "bg-success" : "bg-foreground-muted/30"}`} />
+          <span className="text-xs text-foreground-muted">{configured ? "Connected" : "Not set up"}</span>
+        </div>
+      </div>
+
+      {(editing || !configured) && (
+        <div className="mt-3 space-y-2">
+          <input
+            type="text"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="Topic name (e.g. pocketwatch-alerts)"
+            className="w-full px-3 py-2 text-sm bg-background border border-card-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          <input
+            type="text"
+            value={serverUrl}
+            onChange={(e) => setServerUrl(e.target.value)}
+            placeholder="Server URL (default: https://ntfy.sh)"
+            className="w-full px-3 py-2 text-sm bg-background border border-card-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          <input
+            type="text"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder="Access token (optional, for private topics)"
+            className="w-full px-3 py-2 text-sm bg-background border border-card-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          <p className="text-[10px] text-foreground-muted">
+            Install the <a href="https://apps.apple.com/app/ntfy/id1625396347" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ntfy app</a> and subscribe to the same topic to receive notifications.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                if (topic.trim()) onSave(topic.trim(), serverUrl.trim(), token.trim())
+                setTopic(""); setServerUrl(""); setToken(""); setEditing(false)
+              }}
+              className="px-3 py-1.5 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary/90"
+            >
+              Save
+            </button>
+            {configured && (
+              <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-xs text-foreground-muted hover:text-foreground">
+                Cancel
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {configured && !editing && (
+        <div className="mt-2 flex gap-2">
+          <button onClick={() => setEditing(true)} className="text-xs text-primary hover:underline">Update</button>
+          <button onClick={onDelete} className="text-xs text-error hover:underline">Remove</button>
+          <button onClick={onTest} disabled={isTesting} className="text-xs text-foreground-muted hover:text-foreground disabled:opacity-50">
+            {isTesting ? "Sending..." : "Test"}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function WebPushChannelCard() {
   const { isSubscribed, isSupported, isLoading, subscribe, unsubscribe } = usePushNotifications()
 
@@ -207,7 +293,8 @@ export function NotificationSettings() {
 
   const brrrConfigured = data?.channels.find((c) => c.channel === "brrr")?.configured ?? false
   const telegramConfigured = data?.channels.find((c) => c.channel === "telegram")?.configured ?? false
-  const hasAnyChannel = brrrConfigured || telegramConfigured || push.isSubscribed
+  const ntfyConfigured = data?.channels.find((c) => c.channel === "ntfy")?.configured ?? false
+  const hasAnyChannel = brrrConfigured || telegramConfigured || ntfyConfigured || push.isSubscribed
 
   const handleSaveBrrr = (webhookUrl: string) => {
     saveMutation.mutate(
@@ -220,6 +307,13 @@ export function NotificationSettings() {
     saveMutation.mutate(
       { channel: "notify_telegram", botToken, chatId },
       { onSuccess: () => toast.success("Telegram connected"), onError: (e) => toast.error(e.message) },
+    )
+  }
+
+  const handleSaveNtfy = (topic: string, serverUrl: string, token: string) => {
+    saveMutation.mutate(
+      { channel: "notify_ntfy", topic, serverUrl: serverUrl || undefined, token: token || undefined },
+      { onSuccess: () => toast.success("ntfy connected"), onError: (e) => toast.error(e.message) },
     )
   }
 
@@ -263,6 +357,7 @@ export function NotificationSettings() {
       <div className="space-y-3">
         <BrrrChannelCard configured={brrrConfigured} onSave={handleSaveBrrr} onDelete={() => deleteMutation.mutate("notify_brrr", { onSuccess: () => toast.success("brrr.now removed") })} onTest={() => handleTestChannel("brrr")} isTesting={testMutation.isPending} />
         <TelegramChannelCard configured={telegramConfigured} onSave={handleSaveTelegram} onDelete={() => deleteMutation.mutate("notify_telegram", { onSuccess: () => toast.success("Telegram removed") })} onTest={() => handleTestChannel("telegram")} isTesting={testMutation.isPending} />
+        <NtfyChannelCard configured={ntfyConfigured} onSave={handleSaveNtfy} onDelete={() => deleteMutation.mutate("notify_ntfy", { onSuccess: () => toast.success("ntfy removed") })} onTest={() => handleTestChannel("ntfy")} isTesting={testMutation.isPending} />
         <WebPushChannelCard />
       </div>
 
