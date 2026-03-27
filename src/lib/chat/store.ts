@@ -4,6 +4,7 @@
  */
 
 import type { ChatMessage, ChatThread, ChatStatus, ChatStoreState, PageContext } from "./types"
+import { csrfHeaders } from "@/lib/csrf-client"
 
 const STORAGE_KEY = "pocketllm-threads"
 const MAX_THREADS = 20
@@ -187,7 +188,7 @@ export async function sendMessage(content: string) {
     const res = await fetch("/api/chat", {
       method: "POST",
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: csrfHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({
         messages: thread.messages.slice(0, -1).map((m) => ({
           role: m.role,
