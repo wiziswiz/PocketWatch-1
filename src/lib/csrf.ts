@@ -12,11 +12,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { randomBytes } from "crypto"
 
 const CSRF_COOKIE = "csrf_token"
 const CSRF_HEADER = "x-csrf-token"
-const TOKEN_LENGTH = 32
+const TOKEN_BYTES = 32
 
 /** Paths exempt from CSRF validation (webhooks, internal workers, auth flow) */
 const EXEMPT_PREFIXES = [
@@ -32,7 +31,9 @@ const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"])
  * Generate a new CSRF token.
  */
 export function generateCsrfToken(): string {
-  return randomBytes(TOKEN_LENGTH).toString("hex")
+  const bytes = new Uint8Array(TOKEN_BYTES)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")
 }
 
 /**
