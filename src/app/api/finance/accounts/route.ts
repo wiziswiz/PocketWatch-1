@@ -38,13 +38,14 @@ export async function GET() {
       const isRawBase64 = logo && logo.length > 100 && !logo.startsWith("http") && !logo.startsWith("data:")
 
       if (isRawBase64) {
-        // Fix raw base64 by adding the data URI prefix
-        const fixed = `data:image/png;base64,${logo}`
-        inst.institutionLogo = fixed
+        // Prefer a high-res Clearbit URL over blurry base64 from Plaid
+        const resolved = resolveInstitutionLogo(null, inst.institutionId, inst.institutionName)
+        const replacement = resolved && resolved.startsWith("http") ? resolved : `data:image/png;base64,${logo}`
+        inst.institutionLogo = replacement
         backfillPromises.push(
           db.financeInstitution.update({
             where: { id: inst.id },
-            data: { institutionLogo: fixed },
+            data: { institutionLogo: replacement },
           })
         )
       } else if (isStale) {

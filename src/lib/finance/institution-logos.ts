@@ -74,9 +74,9 @@ const NAME_TO_DOMAIN: Record<string, string> = {
   "bmo": "bmo.com",
   "wealthfront": "wealthfront.com",
   "betterment": "betterment.com",
-  "empower": "empower.com",
-  "empower retirement": "empower.com",
-  "personal capital": "empower.com",
+  "empower": "personalcapital.com",
+  "empower retirement": "personalcapital.com",
+  "personal capital": "personalcapital.com",
   "paypal": "paypal.com",
   "venmo": "venmo.com",
 }
