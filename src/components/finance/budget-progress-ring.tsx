@@ -148,12 +148,12 @@ export function BudgetProgressRing({ spent, budget, size = 192, segments = [] }:
 
     </div>
 
-    {/* Category legend */}
+    {/* Category legend — compact inline */}
     {hasMultiColor && size >= 140 && (
-      <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-3">
-        {arcs.slice(0, 5).map((arc) => (
-          <span key={arc.category} className="flex items-center gap-1 text-[9px] text-foreground-muted">
-            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: arc.color }} />
+      <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-0.5 mt-2 px-2">
+        {arcs.slice(0, 4).map((arc) => (
+          <span key={arc.category} className="flex items-center gap-1 text-[8px] text-foreground-muted whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: arc.color }} />
             {arc.category} {arc.pct}%
           </span>
         ))}

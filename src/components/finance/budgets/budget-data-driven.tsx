@@ -117,7 +117,7 @@ export function BudgetDataDriven({
       {/* Hero: Same layout as My Budget — ring chart + pace chart */}
       {totalThisMonth > 0 && (
         <FadeIn>
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col md:flex-row md:items-stretch gap-4">
             <div className="md:w-[280px] flex-shrink-0">
               <BudgetHeroSummary
                 totalBudgeted={Math.round(totalAvg)}
@@ -132,13 +132,15 @@ export function BudgetDataDriven({
                 segments={segments}
               />
             </div>
-            <BudgetPaceChart
-              dailySpending={dailySpending}
-              totalBudgeted={Math.round(totalAvg)}
-              projectedTotal={projectedTotal}
-              daysInMonth={daysInMonth}
-              dayOfMonth={dayOfMonth}
-            />
+            <div className="flex-1 min-w-0">
+              <BudgetPaceChart
+                dailySpending={dailySpending}
+                totalBudgeted={Math.round(totalAvg)}
+                projectedTotal={projectedTotal}
+                daysInMonth={daysInMonth}
+                dayOfMonth={dayOfMonth}
+              />
+            </div>
           </div>
         </FadeIn>
       )}
