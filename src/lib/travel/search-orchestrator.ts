@@ -179,7 +179,7 @@ async function searchOneLeg(
 
   // Roame search
   if (credentials.roameSession) {
-    const classes = searchClass === "both" ? ["ECON", "PREM"] : [searchClass]
+    const classes = searchClass === "both" ? ["ECON", "PREM"] : [searchClass === "BIZ" || searchClass === "FIRST" ? "PREM" : searchClass]
     for (const cls of classes) {
       promises.push(
         (async () => {
@@ -251,7 +251,7 @@ async function searchOneLeg(
 
   // point.me search (split "both" into ECON + PREM like Roame)
   if (credentials.pointmeToken) {
-    const pmClasses = searchClass === "both" ? ["ECON", "PREM"] : [searchClass]
+    const pmClasses = searchClass === "both" ? ["ECON", "PREM"] : [searchClass === "BIZ" || searchClass === "FIRST" ? "PREM" : searchClass]
     for (const cls of pmClasses) {
       promises.push(
         (async () => {

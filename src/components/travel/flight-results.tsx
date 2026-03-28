@@ -252,8 +252,8 @@ export function FlightResults({ flights, onSearchCabin, isMultiSearch, onFiltere
           {cabinFilter !== "all" && onSearchCabin && (
             <button
               onClick={() => {
-                const classMap: Record<string, string> = { economy: "ECON", business: "PREM", first: "PREM" }
-                onSearchCabin(classMap[cabinFilter] || "PREM")
+                const classMap: Record<string, string> = { economy: "ECON", premium_economy: "PREM_ECON", business: "BIZ", first: "FIRST" }
+                onSearchCabin(classMap[cabinFilter] || "BIZ")
               }}
               className="mt-3 btn-primary text-xs px-4 py-2 rounded-lg"
             >

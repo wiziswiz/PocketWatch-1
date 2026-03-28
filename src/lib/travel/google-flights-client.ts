@@ -32,9 +32,10 @@ export async function searchGoogleFlights(
   apiKey: string,
   config: SearchConfig,
 ): Promise<UnifiedFlightResult[]> {
-  const cabinMap: Record<string, number> = { ECON: 1, PREM: 2, both: 1 }
-  const cabinNames: Record<number, string> = { 1: "economy", 2: "business" }
-  const classesToSearch = config.searchClass === "both" ? [1, 2] : [cabinMap[config.searchClass] || 1]
+  // SerpAPI travel_class: 1=Economy, 2=Premium Economy, 3=Business, 4=First
+  const cabinMap: Record<string, number> = { ECON: 1, PREM_ECON: 2, BIZ: 3, FIRST: 4, PREM: 3 }
+  const cabinNames: Record<number, string> = { 1: "economy", 2: "premium_economy", 3: "business", 4: "first" }
+  const classesToSearch = config.searchClass === "both" ? [1, 3] : [cabinMap[config.searchClass] || 1]
   const allFlights: UnifiedFlightResult[] = []
 
   for (const travelClass of classesToSearch) {

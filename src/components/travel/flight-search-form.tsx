@@ -20,7 +20,7 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
   const [destination, setDestination] = useState("")
   const [date, setDate] = useState("")
   const [returnDate, setReturnDate] = useState("")
-  const [searchClass, setSearchClass] = useState<SearchConfig["searchClass"]>("PREM")
+  const [searchClass, setSearchClass] = useState<SearchConfig["searchClass"]>("BIZ")
   const [tripType, setTripType] = useState<"one_way" | "round_trip">("one_way")
   const [flexDates, setFlexDates] = useState(false)
 
@@ -83,7 +83,9 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
 
   const classOptions: { key: SearchConfig["searchClass"]; label: string }[] = [
     { key: "ECON", label: "Economy" },
-    { key: "PREM", label: "Business/First" },
+    { key: "PREM_ECON", label: "Premium Economy" },
+    { key: "BIZ", label: "Business" },
+    { key: "FIRST", label: "First" },
     { key: "both", label: "All Cabins" },
   ]
 
@@ -233,7 +235,7 @@ export function FlightSearchForm({ onSearch, isSearching, progress, recentSearch
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[11px] text-foreground-muted">Recent:</span>
           {recentSearches.slice(0, 5).map((recent, i) => {
-            const classLabel = recent.searchClass === "ECON" ? "Econ" : recent.searchClass === "PREM" ? "Biz/First" : "All"
+            const classLabel = recent.searchClass === "ECON" ? "Econ" : recent.searchClass === "PREM_ECON" ? "Prem Econ" : recent.searchClass === "BIZ" ? "Biz" : recent.searchClass === "FIRST" ? "First" : "All"
             const rtLabel = recent.tripType === "round_trip" ? " RT" : ""
             return (
               <button

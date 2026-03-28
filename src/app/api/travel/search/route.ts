@@ -24,7 +24,7 @@ export async function GET(req: Request) {
   const originRaw = url.searchParams.get("origin")
   const destRaw = url.searchParams.get("destination")
   const date = url.searchParams.get("date")
-  const searchClass = (url.searchParams.get("class") || "PREM") as SearchConfig["searchClass"]
+  const searchClass = (url.searchParams.get("class") || "BIZ") as SearchConfig["searchClass"]
   const tripType = (url.searchParams.get("tripType") || "one_way") as SearchConfig["tripType"]
   const returnDate = url.searchParams.get("returnDate") || undefined
   const flexDates = url.searchParams.get("flexDates") === "true"

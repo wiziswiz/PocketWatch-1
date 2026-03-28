@@ -118,7 +118,7 @@ export interface SearchConfig {
   origin: string
   destination: string
   departureDate: string
-  searchClass: "ECON" | "PREM" | "both"
+  searchClass: "ECON" | "PREM_ECON" | "BIZ" | "FIRST" | "both"
   tripType?: "one_way" | "round_trip"
   returnDate?: string
   flexDates?: boolean
