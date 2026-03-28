@@ -54,17 +54,10 @@ export function BudgetCategoryCard({ budget, transactions, isEditing, onStartEdi
   return (
     <div className="bg-card border border-card-border rounded-xl px-4 py-3 group hover:border-card-border-hover transition-colors" tabIndex={0} aria-label={`${budget.category}: ${Math.round(budget.percentUsed)}% used`}>
       <div className="flex items-center gap-3">
-        {/* Icon — clickable to expand transactions */}
-        <button
-          onClick={() => transactions?.length && setExpanded(!expanded)}
-          className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
-          style={{ background: `${meta.hex}18` }}
-          title={expanded ? "Collapse" : "Show transactions"}
-        >
-          <span className="material-symbols-rounded" style={{ fontSize: 18, color: meta.hex }}>
-            {expanded ? "expand_less" : meta.icon}
-          </span>
-        </button>
+        {/* Icon */}
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${meta.hex}18` }}>
+          <span className="material-symbols-rounded" style={{ fontSize: 18, color: meta.hex }}>{meta.icon}</span>
+        </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
@@ -146,6 +139,19 @@ export function BudgetCategoryCard({ budget, transactions, isEditing, onStartEdi
           </div>
         </div>
       </div>
+
+      {/* Expand/collapse transactions toggle */}
+      {transactions && transactions.length > 0 && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="mt-2 w-full flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-medium text-foreground-muted hover:text-foreground hover:bg-background-secondary/50 transition-colors"
+        >
+          <span className="material-symbols-rounded" style={{ fontSize: 14 }}>
+            {expanded ? "expand_less" : "expand_more"}
+          </span>
+          {expanded ? "Hide transactions" : `View ${transactions.length} transaction${transactions.length !== 1 ? "s" : ""}`}
+        </button>
+      )}
 
       {/* Expandable transaction list */}
       {expanded && transactions && transactions.length > 0 && (

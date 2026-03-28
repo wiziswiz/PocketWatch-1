@@ -225,16 +225,9 @@ export function BudgetDataDriven({
                 <StaggerItem key={cat.category}>
                   <div className="bg-card border border-card-border rounded-xl px-4 py-3 hover:border-card-border-hover transition-colors" tabIndex={0} aria-label={`${cat.category}: ${percentUsed}% of average`}>
                     <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setExpandedCategory(expandedCategory === cat.category ? null : cat.category)}
-                        className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
-                        style={{ background: `${meta.hex}18` }}
-                        title={expandedCategory === cat.category ? "Collapse" : "Show transactions"}
-                      >
-                        <span className="material-symbols-rounded" style={{ fontSize: 18, color: meta.hex }}>
-                          {expandedCategory === cat.category ? "expand_less" : meta.icon}
-                        </span>
-                      </button>
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${meta.hex}18` }}>
+                        <span className="material-symbols-rounded" style={{ fontSize: 18, color: meta.hex }}>{meta.icon}</span>
+                      </div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
@@ -280,6 +273,19 @@ export function BudgetDataDriven({
                         </div>
                       </div>
                     </div>
+
+                    {/* Expand/collapse transactions toggle */}
+                    {txByCategory?.[cat.category] && txByCategory[cat.category].length > 0 && (
+                      <button
+                        onClick={() => setExpandedCategory(expandedCategory === cat.category ? null : cat.category)}
+                        className="mt-2 w-full flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-medium text-foreground-muted hover:text-foreground hover:bg-background-secondary/50 transition-colors"
+                      >
+                        <span className="material-symbols-rounded" style={{ fontSize: 14 }}>
+                          {expandedCategory === cat.category ? "expand_less" : "expand_more"}
+                        </span>
+                        {expandedCategory === cat.category ? "Hide transactions" : `View ${txByCategory[cat.category].length} transaction${txByCategory[cat.category].length !== 1 ? "s" : ""}`}
+                      </button>
+                    )}
 
                     {/* Expandable transaction list */}
                     {expandedCategory === cat.category && txByCategory?.[cat.category] && txByCategory[cat.category].length > 0 && (
