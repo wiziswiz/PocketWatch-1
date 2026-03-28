@@ -1274,7 +1274,7 @@ model PlaidSyncJob {
 model FinanceAlert {
   id            String   @id @default(cuid())
   userId        String
-  alertType     String   // refund | deposit | price_change | double_charge | bill_reminder | budget_warning | large_transaction | unusual_spend
+  alertType     String   // refund | deposit | price_change | double_charge | bill_reminder | budget_warning | large_transaction | unusual_spend | interest_charge
   title         String
   message       String
   amount        Float?
@@ -1323,6 +1323,8 @@ model NotificationPreference {
   quietStart      String  @default("22:00")
   quietEnd        String  @default("07:00")
   quietOverride   Boolean @default(true) // urgent bypasses quiet hours
+  // Spend threshold — notify when any single transaction exceeds this amount (null = use default $500)
+  spendThreshold  Float?
   user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 

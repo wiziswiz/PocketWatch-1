@@ -23,6 +23,7 @@ export interface FinanceTransaction {
   isPending: boolean
   isExcluded: boolean
   needsReview: boolean
+  isRecurring: boolean
   notes: string | null
   tags: string[]
   logoUrl: string | null

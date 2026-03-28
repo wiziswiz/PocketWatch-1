@@ -53,6 +53,7 @@ export interface NotificationPrefs {
   quietStart: string
   quietEnd: string
   quietOverride: boolean
+  spendThreshold: number | null
 }
 
 // ─── Queries ─────────────────────────────────────────────────

@@ -13,6 +13,7 @@ interface Transaction {
   subcategory?: string | null
   notes?: string | null
   isPending: boolean
+  isRecurring?: boolean
   account?: { name?: string; mask?: string | null } | null
 }
 
@@ -67,6 +68,7 @@ export function AccountTransactions({
                 subcategory={tx.subcategory}
                 notes={tx.notes}
                 isPending={tx.isPending}
+                isRecurring={tx.isRecurring}
                 accountName={tx.account?.name ?? ""}
                 accountMask={tx.account?.mask ?? null}
                 onCategoryChange={(category, createRule) => onCategoryChange(tx.id, category, createRule)}

@@ -28,6 +28,7 @@ interface TransactionRowProps {
   location?: { city?: string | null; region?: string | null; postalCode?: string | null; country?: string | null } | null
   counterparties?: Array<{ name: string; type: string; logoUrl?: string | null }> | null
   needsReview?: boolean
+  isRecurring?: boolean
   isHighlighted?: boolean
   onCategoryChange?: (category: string, createRule: boolean) => void
 }
@@ -36,7 +37,7 @@ export function TransactionRow({
   id, date, merchantName, name, amount, category, subcategory,
   notes, isPending, accountName, accountMask, className,
   paymentChannel, authorizedDate, logoUrl, website, location, counterparties,
-  needsReview, isHighlighted,
+  needsReview, isRecurring, isHighlighted,
   onCategoryChange,
 }: TransactionRowProps) {
   const [expanded, setExpanded] = useState(false)
@@ -111,6 +112,12 @@ export function TransactionRow({
           </p>
           <div className="flex items-center gap-2 mt-0.5">
             <CategoryBadge category={category} />
+            {isRecurring && (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                <span className="material-symbols-rounded" style={{ fontSize: 10 }}>autorenew</span>
+                Subscription
+              </span>
+            )}
             {needsReview && (
               <a
                 href="/finance/categorize"

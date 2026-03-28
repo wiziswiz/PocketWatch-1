@@ -1,6 +1,7 @@
 /**
  * Transaction Intelligence Engine — detects refunds, deposits, double charges,
- * budget warnings, bill reminders, large transactions, and unusual spend.
+ * budget warnings, bill reminders, large transactions, unusual spend,
+ * and interest charges.
  *
  * Returns NewAlert[] for events not yet in the FinanceAlert table.
  */
@@ -23,6 +24,25 @@ const DOUBLE_CHARGE_DAY_TOLERANCE = 1
 const NON_SPENDING_CATEGORIES = new Set([
   "Transfer", "Investment", "Income", "Credit Card Payment",
   "Loan", "Rent", "Mortgage",
+])
+
+// Patterns that indicate interest charges (case-insensitive match against txn name)
+const INTEREST_CHARGE_PATTERNS = [
+  /interest\s+charge/i,
+  /interest\s+on\s+purchase/i,
+  /interest\s+charged/i,
+  /finance\s+charge/i,
+  /periodic\s+interest/i,
+  /purchase\s+interest/i,
+  /cash\s+advance\s+interest/i,
+  /balance\s+transfer\s+interest/i,
+  /^interest$/i,
+  /interest[-–]\w+/i,
+]
+
+// Only categories that are strongly indicative of interest (not generic "Fees & Charges")
+const INTEREST_CHARGE_CATEGORIES = new Set([
+  "Interest", "Bank Fees",
 ])
 
 export interface NewAlert {
@@ -344,11 +364,12 @@ async function detectBillReminders(userId: string): Promise<NewAlert[]> {
 
 // ─── Large Transactions ───────────────────────────────────────
 
-async function detectLargeTransactions(userId: string): Promise<NewAlert[]> {
+async function detectLargeTransactions(userId: string, threshold?: number | null): Promise<NewAlert[]> {
   const cutoff = new Date(Date.now() - LOOKBACK_HOURS * 60 * 60 * 1000)
+  const limit = threshold ?? LARGE_TRANSACTION_THRESHOLD
 
   const large = await db.financeTransaction.findMany({
-    where: { userId, isExcluded: false, isDuplicate: false, createdAt: { gte: cutoff }, amount: { gt: LARGE_TRANSACTION_THRESHOLD } },
+    where: { userId, isExcluded: false, isDuplicate: false, createdAt: { gte: cutoff }, amount: { gt: limit } },
     select: { id: true, name: true, merchantName: true, amount: true, category: true, accountId: true, date: true, paymentChannel: true },
     take: 10,
   })
@@ -503,19 +524,79 @@ async function detectMissedIncome(userId: string): Promise<NewAlert[]> {
   return alerts.slice(0, 3) // cap at 3 missed income alerts per day
 }
 
+// ─── Interest Charge Detection ──────────────────────────────
+
+async function detectInterestCharges(userId: string): Promise<NewAlert[]> {
+  const cutoff = new Date(Date.now() - LOOKBACK_HOURS * 60 * 60 * 1000)
+
+  const recent = await db.financeTransaction.findMany({
+    where: {
+      userId,
+      isExcluded: false,
+      isDuplicate: false,
+      createdAt: { gte: cutoff },
+      amount: { gt: 0 },
+    },
+    select: {
+      id: true, name: true, merchantName: true, amount: true, category: true, accountId: true, date: true,
+      account: { select: { name: true, mask: true } },
+    },
+  })
+
+  // Filter to interest charges by name pattern or category
+  const interestTxns = recent.filter((txn) => {
+    const name = txn.name ?? ""
+    const nameMatch = INTEREST_CHARGE_PATTERNS.some((p) => p.test(name))
+    // Category alone is sufficient for "Interest" / "Bank Fees" (strong signal)
+    const categoryMatch = txn.category != null && INTEREST_CHARGE_CATEGORIES.has(txn.category)
+      && /\binterest\b/i.test(name)
+    return nameMatch || categoryMatch
+  })
+
+  if (interestTxns.length === 0) return []
+
+  const existingAlerts = await db.financeAlert.findMany({
+    where: { userId, alertType: "interest_charge", transactionId: { in: interestTxns.map((t) => t.id) } },
+    select: { transactionId: true },
+  })
+  const alertedIds = new Set(existingAlerts.map((a) => a.transactionId))
+
+  return interestTxns
+    .filter((t) => !alertedIds.has(t.id))
+    .map((txn) => {
+      const accountLabel = txn.account.mask ? `••${txn.account.mask}` : txn.account.name
+      return {
+        alertType: "interest_charge",
+        title: "Interest Charge",
+        message: `${fmtUSD(txn.amount)} interest charged on ${accountLabel}`,
+        amount: txn.amount,
+        merchantName: txn.merchantName ?? txn.name,
+        transactionId: txn.id,
+        metadata: { category: txn.category, accountId: txn.accountId, date: txn.date.toISOString(), originalName: txn.name },
+      }
+    })
+}
+
 // ─── Main Entry Point ─────────────────────────────────────────
 
 export async function detectFinancialEvents(userId: string): Promise<NewAlert[]> {
-  const [refundsDeposits, doubleCharges, budgetWarnings, billReminders, largeTx, unusualSpend, missedIncome] =
+  // Load user's spend threshold preference (null → use default)
+  const prefs = await db.notificationPreference.findUnique({
+    where: { userId },
+    select: { spendThreshold: true },
+  })
+
+  const [refundsDeposits, doubleCharges, budgetWarnings, billReminders, largeTx, unusualSpend, missedIncome, interestCharges] =
     await Promise.all([
       detectRefundsAndDeposits(userId),
       detectDoubleCharges(userId),
       detectBudgetWarnings(userId),
       detectBillReminders(userId),
-      detectLargeTransactions(userId),
+      detectLargeTransactions(userId, prefs?.spendThreshold),
       detectUnusualSpend(userId),
       detectMissedIncome(userId),
+      detectInterestCharges(userId),
     ])
 
-  return [...refundsDeposits, ...doubleCharges, ...budgetWarnings, ...billReminders, ...largeTx, ...unusualSpend, ...missedIncome]
+  return [...refundsDeposits, ...doubleCharges, ...budgetWarnings, ...billReminders, ...largeTx, ...unusualSpend, ...missedIncome, ...interestCharges]
 }

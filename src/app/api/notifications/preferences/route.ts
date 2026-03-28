@@ -39,6 +39,7 @@ export async function GET() {
         quietStart: "22:00",
         quietEnd: "07:00",
         quietOverride: true,
+        spendThreshold: null,
       })
     }
 
@@ -49,6 +50,7 @@ export async function GET() {
       quietStart: prefs.quietStart,
       quietEnd: prefs.quietEnd,
       quietOverride: prefs.quietOverride,
+      spendThreshold: prefs.spendThreshold,
     })
   } catch (err) {
     return apiError("NP002", "Failed to load preferences", 500, err)
@@ -71,6 +73,17 @@ export async function PUT(req: NextRequest) {
     if (body.quietStart !== undefined) data.quietStart = String(body.quietStart)
     if (body.quietEnd !== undefined) data.quietEnd = String(body.quietEnd)
     if (body.quietOverride !== undefined) data.quietOverride = Boolean(body.quietOverride)
+    if (body.spendThreshold !== undefined) {
+      if (body.spendThreshold === null) {
+        data.spendThreshold = null
+      } else {
+        const parsed = Number(body.spendThreshold)
+        if (!Number.isFinite(parsed) || parsed <= 0) {
+          return apiError("NP013", "Spend threshold must be a positive number", 400)
+        }
+        data.spendThreshold = parsed
+      }
+    }
 
     const prefs = await db.notificationPreference.upsert({
       where: { userId: user.id },
@@ -83,6 +96,7 @@ export async function PUT(req: NextRequest) {
         quietStart: body.quietStart ?? "22:00",
         quietEnd: body.quietEnd ?? "07:00",
         quietOverride: body.quietOverride ?? true,
+        spendThreshold: (data.spendThreshold as number | null | undefined) ?? null,
       },
     })
 

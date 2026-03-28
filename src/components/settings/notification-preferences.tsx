@@ -33,6 +33,8 @@ export function NotificationPreferencesSection() {
   const [quietStart, setQuietStart] = useState("22:00")
   const [quietEnd, setQuietEnd] = useState("07:00")
   const [quietOverride, setQuietOverride] = useState(true)
+  const [spendThresholdEnabled, setSpendThresholdEnabled] = useState(false)
+  const [spendThresholdValue, setSpendThresholdValue] = useState("500")
 
   useEffect(() => {
     if (!prefs) return
@@ -42,27 +44,38 @@ export function NotificationPreferencesSection() {
     setQuietStart(prefs.quietStart)
     setQuietEnd(prefs.quietEnd)
     setQuietOverride(prefs.quietOverride)
+    setSpendThresholdEnabled(prefs.spendThreshold != null)
+    setSpendThresholdValue(prefs.spendThreshold != null ? String(prefs.spendThreshold) : "500")
   }, [prefs])
+
+  // Derived spend threshold value (null when disabled or invalid)
+  const parsedThreshold = parseFloat(spendThresholdValue)
+  const computedThreshold = spendThresholdEnabled && Number.isFinite(parsedThreshold) && parsedThreshold > 0
+    ? parsedThreshold
+    : null
+  const thresholdInvalid = spendThresholdEnabled && computedThreshold === null
 
   // Debounced save
   useEffect(() => {
     if (!prefs) return
+    const prevThreshold = prefs.spendThreshold
     const same = JSON.stringify(categories) === JSON.stringify(prefs.categories)
       && JSON.stringify(channelSeverity) === JSON.stringify(prefs.channelSeverity)
       && quietEnabled === prefs.quietEnabled
       && quietStart === prefs.quietStart
       && quietEnd === prefs.quietEnd
       && quietOverride === prefs.quietOverride
-    if (same) return
+      && computedThreshold === prevThreshold
+    if (same || thresholdInvalid) return
 
     const t = setTimeout(() => {
       saveMutation.mutate(
-        { categories, channelSeverity, quietEnabled, quietStart, quietEnd, quietOverride },
+        { categories, channelSeverity, quietEnabled, quietStart, quietEnd, quietOverride, spendThreshold: computedThreshold },
         { onError: (e) => toast.error(e.message) },
       )
     }, 600)
     return () => clearTimeout(t)
-  }, [categories, channelSeverity, quietEnabled, quietStart, quietEnd, quietOverride]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [categories, channelSeverity, quietEnabled, quietStart, quietEnd, quietOverride, computedThreshold]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoading) {
     return <div className="p-5 space-y-3">{[1, 2, 3].map((i) => <div key={i} className="h-10 animate-shimmer rounded-lg" />)}</div>
@@ -131,6 +144,50 @@ export function NotificationPreferencesSection() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Spend threshold */}
+      <div>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div>
+            <p className="text-sm font-medium text-foreground">Spend Threshold Alert</p>
+            <p className="text-xs text-foreground-muted">Get notified when a single transaction exceeds this amount</p>
+          </div>
+          <button
+            onClick={() => setSpendThresholdEnabled(!spendThresholdEnabled)}
+            className={`relative w-9 h-5 rounded-full transition-colors ${
+              spendThresholdEnabled ? "bg-primary" : "bg-foreground-muted/20"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                spendThresholdEnabled ? "translate-x-4" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+        {spendThresholdEnabled && (
+          <div className="pl-0.5">
+            <label className="text-xs text-foreground-muted block mb-1">Threshold amount</label>
+            <div className="relative w-40">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-foreground-muted">$</span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={spendThresholdValue}
+                onChange={(e) => setSpendThresholdValue(e.target.value)}
+                placeholder="500"
+                className="h-8 w-full pl-6 pr-2 rounded text-sm bg-background border border-card-border text-foreground focus:outline-none focus:border-primary"
+              />
+            </div>
+            {thresholdInvalid ? (
+              <p className="text-xs text-amber-500 mt-1.5">Enter a valid amount greater than $0</p>
+            ) : (
+              <p className="text-xs text-foreground-muted mt-1.5">Default is $500 when disabled</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Quiet hours */}

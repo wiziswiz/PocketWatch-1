@@ -1,5 +1,5 @@
 /**
- * 19 finance categories with colors and Material Symbols icons.
+ * 20 finance categories with colors and Material Symbols icons.
  * Used across all finance pages for consistent category styling.
  */
 
@@ -74,6 +74,12 @@ export const FINANCE_CATEGORIES: Record<string, CategoryMeta> = {
     bgClass: "bg-sky-600/10", textClass: "text-sky-600",
     dotClass: "bg-sky-600", borderClass: "border-sky-600",
     hex: "#0284c7",
+  },
+  "Subscriptions": {
+    label: "Subscriptions", icon: "autorenew", color: "violet",
+    bgClass: "bg-violet-500/10", textClass: "text-violet-500",
+    dotClass: "bg-violet-500", borderClass: "border-violet-500",
+    hex: "#8b5cf6",
   },
   "Business Expenses": {
     label: "Business Expenses", icon: "business_center", color: "zinc",
