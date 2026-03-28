@@ -106,28 +106,16 @@ export function DashboardInsightsCard() {
 
   return (
     <div className="bg-card rounded-xl overflow-hidden" style={{ boxShadow: "var(--shadow-sm)" }}>
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-card-border/30">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-rounded text-primary" style={{ fontSize: 18 }}>auto_awesome</span>
-            <span className="text-[10px] font-medium uppercase tracking-widest text-foreground-muted">AI Insights</span>
-          </div>
-          <button
-            onClick={() => generateInsights.mutate({ force: true })}
-            disabled={generateInsights.isPending}
-            className="p-1 rounded text-foreground-muted hover:text-foreground transition-colors"
-            aria-label="Refresh insights"
-          >
-            <span className={cn("material-symbols-rounded", generateInsights.isPending && "animate-spin")} style={{ fontSize: 14 }}>
-              {generateInsights.isPending ? "progress_activity" : "refresh"}
-            </span>
-          </button>
+      {/* Header — title + filter tabs + refresh all on one line */}
+      <div className="flex items-center gap-2 px-5 py-3 border-b border-card-border/30">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="material-symbols-rounded text-primary" style={{ fontSize: 16 }}>auto_awesome</span>
+          <span className="text-[10px] font-medium uppercase tracking-widest text-foreground-muted">AI Insights</span>
         </div>
 
-        {/* Filter tabs */}
+        {/* Filter tabs inline */}
         {aiData?.insights && (
-          <div className="flex items-center gap-1 overflow-x-auto">
+          <div className="flex items-center gap-0.5 ml-auto overflow-x-auto">
             {FILTERS.map((f) => {
               const count = f.key === "all" ? null : counts[f.key]
               const hasItems = f.key === "all" || (count != null && count > 0)
@@ -137,7 +125,7 @@ export function DashboardInsightsCard() {
                   key={f.key}
                   onClick={() => setFilter(f.key)}
                   className={cn(
-                    "px-2.5 py-1 text-[10px] font-medium rounded-md transition-colors whitespace-nowrap",
+                    "px-2 py-0.5 text-[10px] font-medium rounded-md transition-colors whitespace-nowrap",
                     filter === f.key
                       ? "bg-primary text-white"
                       : "text-foreground-muted hover:text-foreground hover:bg-background-secondary"
@@ -145,13 +133,24 @@ export function DashboardInsightsCard() {
                 >
                   {f.label}
                   {count != null && count > 0 && (
-                    <span className={cn("ml-1 tabular-nums", filter === f.key ? "text-white/70" : "text-foreground-muted/50")}>{count}</span>
+                    <span className={cn("ml-0.5 tabular-nums", filter === f.key ? "text-white/70" : "text-foreground-muted/50")}>{count}</span>
                   )}
                 </button>
               )
             })}
           </div>
         )}
+
+        <button
+          onClick={() => generateInsights.mutate({ force: true })}
+          disabled={generateInsights.isPending}
+          className="p-1 rounded text-foreground-muted hover:text-foreground transition-colors flex-shrink-0"
+          aria-label="Refresh insights"
+        >
+          <span className={cn("material-symbols-rounded", generateInsights.isPending && "animate-spin")} style={{ fontSize: 14 }}>
+            {generateInsights.isPending ? "progress_activity" : "refresh"}
+          </span>
+        </button>
       </div>
 
       {aiData?.insights ? (
