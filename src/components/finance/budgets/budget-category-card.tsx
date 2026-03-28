@@ -104,8 +104,8 @@ export function BudgetCategoryCard({ budget, isEditing, onStartEdit, onSaveEdit,
               )}
               {budget.subscriptions.length > 0 && (
                 <div className="hidden md:flex items-center gap-1">
-                  {budget.subscriptions.slice(0, 2).map((sub) => (
-                    <span key={sub.merchantName} className="text-[9px] text-foreground-muted" title={`${sub.merchantName}: ${formatCurrency(sub.amount, "USD", 2)}/mo`}>
+                  {budget.subscriptions.slice(0, 2).map((sub, idx) => (
+                    <span key={`${sub.merchantName}-${idx}`} className="text-[9px] text-foreground-muted" title={`${sub.merchantName}: ${formatCurrency(sub.amount, "USD", 2)}/mo`}>
                       {sub.merchantName.slice(0, 8)}
                     </span>
                   ))}

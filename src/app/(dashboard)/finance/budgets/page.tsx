@@ -17,11 +17,14 @@ import { BudgetCategoryList } from "@/components/finance/budgets/budget-category
 import { BudgetCreateModal } from "@/components/finance/budgets/budget-create-modal"
 import { BudgetSubscriptionsImpact } from "@/components/finance/budgets/budget-subscriptions-impact"
 import { BudgetInlineInsights } from "@/components/finance/budgets/budget-inline-insights"
+import { BudgetDataDriven } from "@/components/finance/budgets/budget-data-driven"
 import { computeBudgetSummary, computePaceMetrics, buildCategoryData, buildInsights } from "@/components/finance/budgets/budget-helpers"
 import type { BudgetInsight } from "@/components/finance/budgets/budget-helpers"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { FadeIn } from "@/components/motion/fade-in"
+
+type BudgetTab = "my-budget" | "data-driven"
 
 export default function FinanceBudgetsPage() {
   const { data: budgets, isLoading, isError } = useFinanceBudgets()
@@ -39,8 +42,20 @@ export default function FinanceBudgetsPage() {
   const deleteBudget = useDeleteBudget()
   const generateAI = useGenerateBudgetAI()
 
+  const hasBudgets = (budgets?.length ?? 0) > 0
+  const [activeTab, setActiveTab] = useState<BudgetTab>(hasBudgets ? "my-budget" : "data-driven")
   const [showModal, setShowModal] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  // Switch to "my-budget" tab when user creates their first budget
+  const handleCreateBudget = (category: string, monthlyLimit: number) => {
+    createBudget.mutate({ category, monthlyLimit }, {
+      onSuccess: () => {
+        setShowModal(false)
+        setActiveTab("my-budget")
+      },
+    })
+  }
 
   const summary = computeBudgetSummary(budgets)
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
@@ -102,29 +117,63 @@ export default function FinanceBudgetsPage() {
 
   return (
     <div className="space-y-4">
+      {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Budgets / {currentMonth}</h1>
-          <p className={cn("text-xs font-medium mt-0.5", isOverBudget ? "text-error" : "text-success")}>
-            {summary.budgetCount > 0 ? (isOverBudget ? `Over Budget · ${summary.overBudgetCount} of ${summary.budgetCount} categories` : "On Track") : ""}
-          </p>
+          {activeTab === "my-budget" && summary.budgetCount > 0 && (
+            <p className={cn("text-xs font-medium mt-0.5", isOverBudget ? "text-error" : "text-success")}>
+              {isOverBudget ? `Over Budget · ${summary.overBudgetCount} of ${summary.budgetCount} categories` : "On Track"}
+            </p>
+          )}
         </div>
-        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors">
-          <span className="material-symbols-rounded" style={{ fontSize: 14 }}>add</span>
-          Create Budget
-        </button>
+        {activeTab === "my-budget" && (
+          <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors">
+            <span className="material-symbols-rounded" style={{ fontSize: 14 }}>add</span>
+            Create Budget
+          </button>
+        )}
       </div>
 
-      {isLoading ? <FinanceCardSkeleton /> : summary.budgetCount === 0 ? (
+      {/* ── Tab Bar ── */}
+      <div className="flex items-center gap-1 bg-background-secondary rounded-lg p-1 w-fit">
+        <TabButton active={activeTab === "data-driven"} onClick={() => setActiveTab("data-driven")} icon="auto_graph">
+          Data-Driven
+        </TabButton>
+        <TabButton active={activeTab === "my-budget"} onClick={() => setActiveTab("my-budget")} icon="tune">
+          My Budget
+          {hasBudgets && (
+            <span className="ml-1.5 text-[9px] font-bold bg-primary/15 text-primary px-1.5 py-0.5 rounded-full tabular-nums">
+              {budgets!.length}
+            </span>
+          )}
+        </TabButton>
+      </div>
+
+      {/* ── Content ── */}
+      {isLoading ? <FinanceCardSkeleton /> : activeTab === "data-driven" ? (
+        <BudgetDataDriven
+          suggestions={defaultSuggestions}
+          topCategories={deep?.topCategories ?? []}
+          trendsData={trendsData}
+          totalSpending={deep?.totalSpending ?? 0}
+          currentMonth={currentMonth}
+          onCreateBudget={() => setShowModal(true)}
+        />
+      ) : summary.budgetCount === 0 ? (
+        /* ── My Budget empty state ── */
         <div className="bg-card rounded-2xl p-12 text-center" style={{ boxShadow: "var(--shadow-sm)" }}>
           <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <span className="material-symbols-rounded text-primary" style={{ fontSize: 24 }}>savings</span>
           </div>
           <h3 className="text-base font-semibold text-foreground mb-1.5">No budgets yet</h3>
-          <p className="text-sm text-foreground-muted mb-4 max-w-sm mx-auto">Set spending limits by category to track and control your spending.</p>
-          <button onClick={() => setShowModal(true)} className="px-5 py-2.5 bg-foreground text-background rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity">Create Your First Budget</button>
+          <p className="text-sm text-foreground-muted mb-4 max-w-sm mx-auto">Set spending limits by category to track your progress against goals.</p>
+          <button onClick={() => setShowModal(true)} className="px-5 py-2.5 bg-foreground text-background rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity">
+            Create Your First Budget
+          </button>
         </div>
       ) : (
+        /* ── My Budget with data ── */
         <>
           <FadeIn>
             <div className="flex flex-col md:flex-row gap-4">
@@ -156,8 +205,26 @@ export default function FinanceBudgetsPage() {
         </>
       )}
 
-      <BudgetCreateModal isOpen={showModal} onClose={() => setShowModal(false)} existingBudgets={budgets} suggestions={defaultSuggestions} trendsData={trendsData} onCreate={(category, monthlyLimit) => { createBudget.mutate({ category, monthlyLimit }, { onSuccess: () => setShowModal(false) }) }} isPending={createBudget.isPending} />
+      {/* ── Modals ── */}
+      <BudgetCreateModal isOpen={showModal} onClose={() => setShowModal(false)} existingBudgets={budgets} suggestions={defaultSuggestions} trendsData={trendsData} onCreate={handleCreateBudget} isPending={createBudget.isPending} />
       <ConfirmDialog open={!!deletingId} onClose={() => setDeletingId(null)} onConfirm={() => { if (deletingId) deleteBudget.mutate(deletingId, { onSuccess: () => setDeletingId(null) }) }} title={`Delete ${deletingBudget?.category ?? ""} budget?`} description="This will permanently delete this budget." confirmLabel="Delete" variant="danger" isLoading={deleteBudget.isPending} />
     </div>
+  )
+}
+
+function TabButton({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: string; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all",
+        active
+          ? "bg-card text-foreground shadow-sm"
+          : "text-foreground-muted hover:text-foreground"
+      )}
+    >
+      <span className="material-symbols-rounded" style={{ fontSize: 14 }}>{icon}</span>
+      {children}
+    </button>
   )
 }
