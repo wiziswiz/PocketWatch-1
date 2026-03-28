@@ -39,14 +39,19 @@ export function buildFinancialAnalysisPrompt(context: AnonymizedFinancialContext
   return `You are a personal finance advisor analyzing spending data for ${context.month}.
 Respond ONLY with valid JSON matching the schema below. No markdown, no explanation, just JSON.
 
+IMPORTANT RULES:
+- The keyInsight must be a NON-OBVIOUS behavioral pattern or actionable recommendation. Do NOT restate spending totals, income, or savings rate — the user already sees those numbers. Instead identify: a hidden pattern (e.g. "Weekday lunches cost more than groceries"), a behavioral change to make (e.g. "Switching 3 Uber rides/week to subway saves $400/mo"), or a risk (e.g. "Credit utilization spiked — pay down before statement closes").
+- savingsOpportunities must include specific merchant names, dollar amounts, and concrete actions.
+- actionItems must be specific enough to act on TODAY, not vague advice like "reduce spending".
+
 SCHEMA:
 {
-  "keyInsight": { "title": "string (max 60 chars)", "description": "string (max 200 chars)" },
-  "savingsOpportunities": [{ "area": "string", "estimatedSavings": number, "description": "string" }],
+  "keyInsight": { "title": "string (max 60 chars, actionable not descriptive)", "description": "string (max 250 chars, specific behavioral insight)" },
+  "savingsOpportunities": [{ "area": "string", "estimatedSavings": number, "description": "string (reference merchants and amounts)" }],
   "budgetRecommendations": [{ "category": "string", "suggestedLimit": number, "reason": "string" }],
   "subscriptionReview": [{ "name": "string", "verdict": "keep|review|cancel", "reason": "string" }],
   "anomalyComments": [{ "category": "string", "comment": "string" }],
-  "actionItems": [{ "action": "string (max 100 chars)", "priority": "high|medium|low" }]
+  "actionItems": [{ "action": "string (max 120 chars, specific and actionable)", "priority": "high|medium|low" }]
 }
 
 FINANCIAL DATA:
@@ -81,5 +86,5 @@ COST STRUCTURE:
 - Recurring: $${context.recurringVsOneTime.recurringTotal} (${context.recurringVsOneTime.fixedCostRatio}%)
 - One-time: $${context.recurringVsOneTime.oneTimeTotal}
 
-Give practical, specific advice. Reference actual category names and dollar amounts. Keep responses concise.`
+Give practical, specific advice. Reference actual merchant names and dollar amounts. The user can already see their totals — tell them something they DON'T know.`
 }
