@@ -165,6 +165,7 @@ export default function FinanceBudgetsPage() {
           suggestions={defaultSuggestions}
           topCategories={deep?.topCategories ?? []}
           trendsData={trendsData}
+          dailySpending={deep?.dailySpending ?? []}
           currentMonth={currentMonth}
           hasBudgets={hasBudgets}
           onCreateBudget={() => setShowModal(true)}

@@ -7,6 +7,11 @@ import { formatCurrency, cn } from "@/lib/utils"
 import { FadeIn } from "@/components/motion/fade-in"
 import { StaggerChildren, StaggerItem } from "@/components/motion/stagger-children"
 import { BudgetSparkline } from "./budget-sparkline"
+import dynamic from "next/dynamic"
+const BudgetPaceChart = dynamic(
+  () => import("./budget-pace-chart").then((m) => m.BudgetPaceChart),
+  { ssr: false, loading: () => <div className="h-[200px] animate-shimmer rounded-xl" /> }
+)
 
 interface Suggestion {
   category: string
@@ -30,6 +35,7 @@ interface BudgetDataDrivenProps {
   suggestions: Suggestion[]
   topCategories: TopCategory[]
   trendsData: { months: TrendMonth[] } | undefined
+  dailySpending: Array<{ date: string; amount: number }>
   currentMonth: string
   hasBudgets: boolean
   onCreateBudget: () => void
@@ -39,6 +45,7 @@ export function BudgetDataDriven({
   suggestions,
   topCategories,
   trendsData,
+  dailySpending,
   currentMonth,
   hasBudgets,
   onCreateBudget,
@@ -75,8 +82,85 @@ export function BudgetDataDriven({
   const vsAvgPct = totalAvg > 0 ? Math.round(((totalThisMonth - totalAvg) / totalAvg) * 100) : 0
   const isAboveAvg = totalThisMonth > totalAvg
 
+  const now = new Date()
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  const dayOfMonth = now.getDate()
+  const dailyAvg = dayOfMonth > 0 ? totalThisMonth / dayOfMonth : 0
+  const projectedTotal = Math.round(dailyAvg * daysInMonth)
+
+  // Build donut segments from top categories
+  const DONUT_COLORS = ["#6366f1", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#64748b"]
+  const donutSegments = categories.slice(0, 7).map((cat, i) => ({
+    name: cat.category,
+    value: cat.thisMonth,
+    color: getCategoryMeta(cat.category).hex || DONUT_COLORS[i % DONUT_COLORS.length],
+  }))
+
   return (
     <div className="space-y-4">
+      {/* Hero: Donut + Spending Pace Chart */}
+      {totalThisMonth > 0 && (
+        <FadeIn>
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Donut summary */}
+            <div className="md:w-[280px] flex-shrink-0 bg-card border border-card-border rounded-xl p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
+              <div className="flex flex-col items-center">
+                <svg viewBox="0 0 120 120" className="w-[160px] h-[160px]">
+                  {(() => {
+                    let cumAngle = -90
+                    return donutSegments.map((seg) => {
+                      const pct = totalThisMonth > 0 ? seg.value / totalThisMonth : 0
+                      const angle = pct * 360
+                      const startAngle = cumAngle
+                      cumAngle += angle
+                      const x1 = 60 + 45 * Math.cos((startAngle * Math.PI) / 180)
+                      const y1 = 60 + 45 * Math.sin((startAngle * Math.PI) / 180)
+                      const x2 = 60 + 45 * Math.cos(((startAngle + angle) * Math.PI) / 180)
+                      const y2 = 60 + 45 * Math.sin(((startAngle + angle) * Math.PI) / 180)
+                      const largeArc = angle > 180 ? 1 : 0
+                      return (
+                        <path
+                          key={seg.name}
+                          d={`M60,60 L${x1},${y1} A45,45 0 ${largeArc},1 ${x2},${y2} Z`}
+                          fill={seg.color}
+                          stroke="var(--card)"
+                          strokeWidth="1.5"
+                        />
+                      )
+                    })
+                  })()}
+                  <circle cx="60" cy="60" r="30" fill="var(--card)" />
+                  <text x="60" y="56" textAnchor="middle" className="text-sm font-bold fill-foreground" style={{ fontFamily: "var(--font-mono)" }}>
+                    {formatCurrency(totalThisMonth, "USD", 0)}
+                  </text>
+                  <text x="60" y="70" textAnchor="middle" className="text-[8px] fill-foreground-muted uppercase tracking-wider">
+                    total spent
+                  </text>
+                </svg>
+                <div className="mt-2 text-center">
+                  <p className="text-[10px] text-foreground-muted">
+                    {isAboveAvg
+                      ? <span className="text-error font-semibold">{formatCurrency(totalThisMonth - totalAvg, "USD", 0)} over avg</span>
+                      : <span className="text-success font-semibold">{formatCurrency(totalAvg - totalThisMonth, "USD", 0)} below avg</span>}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Pace chart */}
+            <div className="flex-1 bg-card border border-card-border rounded-xl p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
+              <BudgetPaceChart
+                dailySpending={dailySpending}
+                totalBudgeted={Math.round(totalAvg)}
+                projectedTotal={projectedTotal}
+                daysInMonth={daysInMonth}
+                dayOfMonth={dayOfMonth}
+              />
+            </div>
+          </div>
+        </FadeIn>
+      )}
+
       {/* Summary strip */}
       <FadeIn>
         <StaggerChildren className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-card-border rounded-xl overflow-hidden" staggerMs={60}>
