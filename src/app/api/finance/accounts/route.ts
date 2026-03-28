@@ -39,7 +39,7 @@ export async function GET() {
 
       if (isRawBase64) {
         // Prefer a high-res Clearbit URL over blurry base64 from Plaid
-        const resolved = resolveInstitutionLogo(null, inst.institutionId, inst.institutionName)
+        const resolved = resolveInstitutionLogo(null, null, inst.institutionName)
         const replacement = resolved && resolved.startsWith("http") ? resolved : `data:image/png;base64,${logo}`
         inst.institutionLogo = replacement
         backfillPromises.push(
