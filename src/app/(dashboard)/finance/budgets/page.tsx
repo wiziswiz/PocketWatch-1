@@ -166,6 +166,7 @@ export default function FinanceBudgetsPage() {
           topCategories={deep?.topCategories ?? []}
           trendsData={trendsData}
           dailySpending={deep?.dailySpending ?? []}
+          txByCategory={txByCategory}
           currentMonth={currentMonth}
           hasBudgets={hasBudgets}
           onCreateBudget={() => setShowModal(true)}
@@ -199,7 +200,7 @@ export default function FinanceBudgetsPage() {
           <BudgetStatStrip dailyAvg={pace.dailyAvg} projectedTotal={pace.projectedTotal} totalBudgeted={summary.totalBudgeted} worstCategory={worstCategory} onTrackCount={summary.budgetCount - summary.overBudgetCount} totalCount={summary.budgetCount} />
 
           <FadeIn delay={0.1}>
-            <BudgetCategoryList categories={categoryData} onEditBudget={(id, limit) => updateBudget.mutate({ budgetId: id, monthlyLimit: limit })} onDeleteBudget={(id) => setDeletingId(id)} onAddBudget={() => setShowModal(true)} />
+            <BudgetCategoryList categories={categoryData} txByCategory={txByCategory} onEditBudget={(id, limit) => updateBudget.mutate({ budgetId: id, monthlyLimit: limit })} onDeleteBudget={(id) => setDeletingId(id)} onAddBudget={() => setShowModal(true)} />
           </FadeIn>
 
           <FadeIn delay={0.15}>

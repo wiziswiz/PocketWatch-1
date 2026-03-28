@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useState, useMemo } from "react"
 import { getCategoryMeta } from "@/lib/finance/categories"
 import { BudgetProgressBar } from "@/components/finance/budget-progress-bar"
 import { formatCurrency, cn } from "@/lib/utils"
@@ -38,6 +38,7 @@ interface BudgetDataDrivenProps {
   topCategories: TopCategory[]
   trendsData: { months: TrendMonth[] } | undefined
   dailySpending: Array<{ date: string; amount: number }>
+  txByCategory?: Record<string, Array<{ name: string; merchantName: string | null; amount: number; date: string | Date }>>
   currentMonth: string
   hasBudgets: boolean
   onCreateBudget: () => void
@@ -48,6 +49,7 @@ export function BudgetDataDriven({
   topCategories,
   trendsData,
   dailySpending,
+  txByCategory,
   currentMonth,
   hasBudgets,
   onCreateBudget,
@@ -103,6 +105,8 @@ export function BudgetDataDriven({
     spent: c.thisMonth,
     monthlyLimit: c.avgMonthly > 0 ? c.avgMonthly : c.thisMonth,
   }))
+
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
 
   // Find worst category
   const worstCategory = useMemo(() => {
@@ -221,9 +225,16 @@ export function BudgetDataDriven({
                 <StaggerItem key={cat.category}>
                   <div className="bg-card border border-card-border rounded-xl px-4 py-3 hover:border-card-border-hover transition-colors" tabIndex={0} aria-label={`${cat.category}: ${percentUsed}% of average`}>
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${meta.hex}18` }}>
-                        <span className="material-symbols-rounded" style={{ fontSize: 18, color: meta.hex }}>{meta.icon}</span>
-                      </div>
+                      <button
+                        onClick={() => setExpandedCategory(expandedCategory === cat.category ? null : cat.category)}
+                        className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+                        style={{ background: `${meta.hex}18` }}
+                        title={expandedCategory === cat.category ? "Collapse" : "Show transactions"}
+                      >
+                        <span className="material-symbols-rounded" style={{ fontSize: 18, color: meta.hex }}>
+                          {expandedCategory === cat.category ? "expand_less" : meta.icon}
+                        </span>
+                      </button>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
@@ -269,6 +280,28 @@ export function BudgetDataDriven({
                         </div>
                       </div>
                     </div>
+
+                    {/* Expandable transaction list */}
+                    {expandedCategory === cat.category && txByCategory?.[cat.category] && txByCategory[cat.category].length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-card-border/30 space-y-1.5">
+                        {txByCategory[cat.category].sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)).slice(0, 15).map((tx, i) => (
+                          <div key={i} className="flex items-center justify-between text-[11px]">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <span className="text-foreground truncate">{tx.merchantName ?? tx.name}</span>
+                              <span className="text-foreground-muted/40 flex-shrink-0">
+                                {new Date(tx.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                              </span>
+                            </div>
+                            <span className="text-foreground font-semibold tabular-nums ml-2 flex-shrink-0">
+                              {formatCurrency(Math.abs(tx.amount))}
+                            </span>
+                          </div>
+                        ))}
+                        {txByCategory[cat.category].length > 15 && (
+                          <p className="text-[10px] text-foreground-muted">+{txByCategory[cat.category].length - 15} more</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </StaggerItem>
               )

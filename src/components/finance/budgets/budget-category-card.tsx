@@ -7,8 +7,11 @@ import { getCategoryMeta } from "@/lib/finance/categories"
 import { formatCurrency, cn } from "@/lib/utils"
 import type { BudgetCategoryData } from "./budget-types"
 
+interface TxEntry { name: string; merchantName: string | null; amount: number; date: string | Date }
+
 interface BudgetCategoryCardProps {
   budget: BudgetCategoryData
+  transactions?: TxEntry[]
   isEditing: boolean
   onStartEdit: () => void
   onSaveEdit: (id: string, newLimit: number) => void
@@ -17,13 +20,14 @@ interface BudgetCategoryCardProps {
   showSixMonthAvg: boolean
 }
 
-export function BudgetCategoryCard({ budget, isEditing, onStartEdit, onSaveEdit, onCancelEdit, onDelete, showSixMonthAvg }: BudgetCategoryCardProps) {
+export function BudgetCategoryCard({ budget, transactions, isEditing, onStartEdit, onSaveEdit, onCancelEdit, onDelete, showSixMonthAvg }: BudgetCategoryCardProps) {
   const meta = getCategoryMeta(budget.category)
   const isOver = budget.percentUsed > 100
   const isWarn = budget.percentUsed >= 80 && !isOver
   const overAmount = budget.spent - budget.monthlyLimit
 
   const [editValue, setEditValue] = useState(String(budget.monthlyLimit))
+  const [expanded, setExpanded] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -50,10 +54,17 @@ export function BudgetCategoryCard({ budget, isEditing, onStartEdit, onSaveEdit,
   return (
     <div className="bg-card border border-card-border rounded-xl px-4 py-3 group hover:border-card-border-hover transition-colors" tabIndex={0} aria-label={`${budget.category}: ${Math.round(budget.percentUsed)}% used`}>
       <div className="flex items-center gap-3">
-        {/* Icon */}
-        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${meta.hex}18` }}>
-          <span className="material-symbols-rounded" style={{ fontSize: 18, color: meta.hex }}>{meta.icon}</span>
-        </div>
+        {/* Icon — clickable to expand transactions */}
+        <button
+          onClick={() => transactions?.length && setExpanded(!expanded)}
+          className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+          style={{ background: `${meta.hex}18` }}
+          title={expanded ? "Collapse" : "Show transactions"}
+        >
+          <span className="material-symbols-rounded" style={{ fontSize: 18, color: meta.hex }}>
+            {expanded ? "expand_less" : meta.icon}
+          </span>
+        </button>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
@@ -135,6 +146,28 @@ export function BudgetCategoryCard({ budget, isEditing, onStartEdit, onSaveEdit,
           </div>
         </div>
       </div>
+
+      {/* Expandable transaction list */}
+      {expanded && transactions && transactions.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-card-border/30 space-y-1.5">
+          {transactions.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)).slice(0, 15).map((tx, i) => (
+            <div key={i} className="flex items-center justify-between text-[11px]">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <span className="text-foreground truncate">{tx.merchantName ?? tx.name}</span>
+                <span className="text-foreground-muted/40 flex-shrink-0">
+                  {new Date(tx.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </span>
+              </div>
+              <span className="text-foreground font-semibold tabular-nums ml-2 flex-shrink-0">
+                {formatCurrency(Math.abs(tx.amount))}
+              </span>
+            </div>
+          ))}
+          {transactions.length > 15 && (
+            <p className="text-[10px] text-foreground-muted">+{transactions.length - 15} more</p>
+          )}
+        </div>
+      )}
     </div>
   )
 }

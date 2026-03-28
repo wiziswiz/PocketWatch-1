@@ -8,14 +8,17 @@ import { cn } from "@/lib/utils"
 import type { BudgetCategoryData } from "./budget-types"
 import Link from "next/link"
 
+interface TxEntry { name: string; merchantName: string | null; amount: number; date: string | Date }
+
 interface BudgetCategoryListProps {
   categories: BudgetCategoryData[]
+  txByCategory?: Record<string, TxEntry[]>
   onEditBudget: (id: string, limit: number) => void
   onDeleteBudget: (id: string) => void
   onAddBudget: () => void
 }
 
-export function BudgetCategoryList({ categories, onEditBudget, onDeleteBudget, onAddBudget }: BudgetCategoryListProps) {
+export function BudgetCategoryList({ categories, txByCategory, onEditBudget, onDeleteBudget, onAddBudget }: BudgetCategoryListProps) {
   const [viewMode, setViewMode] = useState<"this" | "avg">("this")
   const [sortBy, setSortBy] = useState<SortMode>("status")
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -44,6 +47,7 @@ export function BudgetCategoryList({ categories, onEditBudget, onDeleteBudget, o
           <StaggerItem key={budget.id}>
             <BudgetCategoryCard
               budget={budget}
+              transactions={txByCategory?.[budget.category]}
               isEditing={editingId === budget.id}
               onStartEdit={() => setEditingId(budget.id)}
               onSaveEdit={(id, limit) => { onEditBudget(id, limit); setEditingId(null) }}
