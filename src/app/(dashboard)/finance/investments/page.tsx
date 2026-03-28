@@ -57,8 +57,8 @@ export default function InvestmentsPage() {
   const { data: holdingsData } = useInvestmentHoldings()
   const { data: invTxData } = useInvestmentTransactions({ page: invTxPage, type: invTxType || undefined })
   const { data: invHistory, isLoading: invHistoryLoading } = useInvestmentHistory(RANGE_MAP[chartRange] ?? "1m")
-  const { data: aiData } = useAIInsights()
-  const generateInsights = useGenerateAIInsights()
+  const { data: aiData } = useAIInsights("investments")
+  const generateInsights = useGenerateAIInsights("investments")
 
   const institutions = data?.institutions ?? []
   const totalValue = data?.totalValue ?? 0

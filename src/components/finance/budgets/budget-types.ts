@@ -67,3 +67,10 @@ export interface BudgetSegment {
   spent: number
   monthlyLimit: number
 }
+
+export interface BudgetInsight {
+  type: "info" | "warning" | "success" | "danger"
+  icon: string
+  message: string
+  action?: { label: string; onClick: () => void }
+}

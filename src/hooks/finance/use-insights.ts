@@ -232,22 +232,25 @@ export function useUpcomingBills(month?: string) {
 
 // ─── AI Insights Hooks ──────────────────────────────────────────
 
-export function useAIInsights() {
+export function useAIInsights(scope?: "investments") {
   return useQuery({
-    queryKey: financeKeys.aiInsights(),
-    queryFn: () => financeFetch<AIInsightsData>("/insights/ai"),
+    queryKey: financeKeys.aiInsights(scope),
+    queryFn: () => financeFetch<AIInsightsData>(`/insights/ai${scope ? `?scope=${scope}` : ""}`),
     staleTime: 60 * 60 * 1000, // 1 hour
   })
 }
 
-export function useGenerateAIInsights() {
+export function useGenerateAIInsights(scope?: "investments") {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (opts?: { force?: boolean }) =>
-      financeFetch<AIInsightsData>(`/insights/ai${opts?.force ? "?force=true" : ""}`, {
-        method: "POST",
-      }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: financeKeys.aiInsights() }),
+    mutationFn: (opts?: { force?: boolean }) => {
+      const params = new URLSearchParams()
+      if (opts?.force) params.set("force", "true")
+      if (scope) params.set("scope", scope)
+      const qs = params.toString()
+      return financeFetch<AIInsightsData>(`/insights/ai${qs ? `?${qs}` : ""}`, { method: "POST" })
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: financeKeys.aiInsights(scope) }),
   })
 }
 

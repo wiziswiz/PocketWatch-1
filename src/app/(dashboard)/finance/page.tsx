@@ -21,6 +21,7 @@ import { FinanceEmpty } from "@/components/finance/finance-empty"
 import { FinanceCardSkeleton } from "@/components/finance/finance-loading"
 import { SpendingMonthCard } from "@/components/finance/spending-month-card"
 import { MonthlyBillsCard } from "@/components/finance/dashboard/monthly-bills-card"
+import { DashboardInsightsCard } from "@/components/finance/dashboard/dashboard-insights-card"
 import { FadeIn } from "@/components/motion/fade-in"
 import { StaggerChildren, StaggerItem } from "@/components/motion/stagger-children"
 
@@ -324,9 +325,9 @@ export default function FinanceDashboardPage() {
         <MonthlyBillsCard isHidden={isHidden} />
       </FadeIn>
 
-      {/* Cash Flow Summary */}
+      {/* Cash Flow + AI Insights */}
       {deep && (
-        <FadeIn delay={0.3} className="mb-8">
+        <FadeIn delay={0.3} className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-card rounded-xl p-5" style={{ boxShadow: "var(--shadow-sm)" }}>
             <div className="flex items-center gap-2 mb-4">
               <span className="material-symbols-rounded text-foreground-muted" style={{ fontSize: 18 }}>account_balance_wallet</span>
@@ -369,6 +370,7 @@ export default function FinanceDashboardPage() {
               </div>
             )}
           </div>
+          <DashboardInsightsCard />
         </FadeIn>
       )}
     </div>
