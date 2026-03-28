@@ -54,7 +54,8 @@ export function BudgetProgressRing({ spent, budget, size = 192, segments = [] }:
       const end = start + sweep
       cursor = end + GAP_DEG / 2
       const meta = getCategoryMeta(seg.category)
-      return { start, end, color: meta.hex }
+      const pct = Math.round((seg.spent / total) * 100)
+      return { start, end, color: meta.hex, category: seg.category, pct }
     })
   }, [segments, percent])
 
@@ -67,6 +68,7 @@ export function BudgetProgressRing({ spent, budget, size = 192, segments = [] }:
   const offset = circumference * (1 - percent / 100)
 
   return (
+    <>
     <div
       className="relative flex items-center justify-center flex-shrink-0"
       style={{ width: size, height: size }}
@@ -145,5 +147,18 @@ export function BudgetProgressRing({ spent, budget, size = 192, segments = [] }:
       </div>
 
     </div>
+
+    {/* Category legend */}
+    {hasMultiColor && size >= 140 && (
+      <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-3">
+        {arcs.slice(0, 5).map((arc) => (
+          <span key={arc.category} className="flex items-center gap-1 text-[9px] text-foreground-muted">
+            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: arc.color }} />
+            {arc.category} {arc.pct}%
+          </span>
+        ))}
+      </div>
+    )}
+    </>
   )
 }
