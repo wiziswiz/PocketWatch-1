@@ -61,7 +61,12 @@ function inferType(security: Holding["security"]): string {
   if (security.isCashEquivalent) return "cash"
 
   const name = (security.name ?? "").toLowerCase()
-  if (name.includes(" etf") || name.includes("index fund")) return "etf"
+  const ticker = (security.tickerSymbol ?? "").toUpperCase()
+
+  // Target date / lifecycle funds → mutual fund
+  if (name.includes("target date") || name.includes("target retirement") || name.includes("lifecycle") || /\b20[2-7]\d\b/.test(name)) return "mutual fund"
+
+  if (name.includes(" etf") || name.includes("index fund") || (ticker && ticker.length <= 4 && name.includes("index"))) return "etf"
   if (name.includes("mutual fund") || name.includes("fund -") || name.includes("funds -")) return "mutual fund"
   if (name.includes("bond") || name.includes("treasury") || name.includes("note ") || name.includes("fixed income")) return "fixed income"
   if (name.includes("money market") || name.includes("cash") || name.includes("u s dollar") || name.includes("u.s. dollar")) return "cash"
@@ -91,8 +96,9 @@ const SECTOR_ALIASES: Record<string, string> = {
 
 /** Infer sector from security data when Plaid's sector field is null */
 function inferSector(security: Holding["security"]): string {
-  if (!security) return "Mixed"
+  if (!security) return "Diversified"
 
+  // Use Plaid's sector if meaningful
   if (security.sector && security.sector !== "Other" && security.sector !== "Miscellaneous") {
     return SECTOR_ALIASES[security.sector.toLowerCase()] ?? security.sector
   }
@@ -102,14 +108,31 @@ function inferSector(security: Holding["security"]): string {
   if (security.isCashEquivalent) return "Cash"
 
   const name = (security.name ?? "").toLowerCase()
-  if (name.includes("s&p") || name.includes("total stock") || name.includes("total market") || name.includes("index")) return "Broad Market"
-  if (name.includes("bond") || name.includes("treasury") || name.includes("fixed")) return "Fixed Income"
-  if (name.includes("international") || name.includes("emerging")) return "International"
-  if (name.includes("real estate") || name.includes("reit")) return "REITs"
-  if (name.includes("tech")) return "Technology"
-  if (name.includes("exchange") || name.includes("tds") || name.includes("target date") || name.includes("retirement")) return "Target Date"
 
-  return "Mixed"
+  // Target date / lifecycle funds are diversified (stocks + bonds mix)
+  if (name.includes("target date") || name.includes("target retirement") || name.includes("lifecycle") || /\b20[2-7]\d\b/.test(name)) return "Diversified"
+
+  // Broad market index funds
+  if (name.includes("total stock") || name.includes("total market") || name.includes("s&p 500") || name.includes("s&p500")) return "Broad Market"
+  if (name.includes("index") && !name.includes("bond")) return "Broad Market"
+
+  // Fixed income
+  if (name.includes("bond") || name.includes("treasury") || name.includes("fixed income") || name.includes("aggregate bond")) return "Fixed Income"
+
+  // International
+  if (name.includes("international") || name.includes("emerging") || name.includes("foreign") || name.includes("ex-us") || name.includes("ex us")) return "International"
+
+  // Real assets
+  if (name.includes("real estate") || name.includes("reit")) return "Real Estate"
+  if (name.includes("commodity") || name.includes("gold") || name.includes("silver")) return "Commodities"
+
+  // Sectors
+  if (name.includes("tech") || name.includes("semiconductor") || name.includes("software")) return "Technology"
+  if (name.includes("health") || name.includes("biotech") || name.includes("pharma")) return "Healthcare"
+  if (name.includes("energy") || name.includes("oil") || name.includes("natural gas")) return "Energy"
+  if (name.includes("financial") || name.includes("banking")) return "Financials"
+
+  return "Diversified"
 }
 
 // ─── Active Shape Renderer ─────────────────────────────────────
