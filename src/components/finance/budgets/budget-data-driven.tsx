@@ -30,7 +30,6 @@ interface BudgetDataDrivenProps {
   suggestions: Suggestion[]
   topCategories: TopCategory[]
   trendsData: { months: TrendMonth[] } | undefined
-  totalSpending: number
   currentMonth: string
   hasBudgets: boolean
   onCreateBudget: () => void
@@ -40,7 +39,6 @@ export function BudgetDataDriven({
   suggestions,
   topCategories,
   trendsData,
-  totalSpending,
   currentMonth,
   hasBudgets,
   onCreateBudget,
@@ -63,7 +61,7 @@ export function BudgetDataDriven({
     for (const tc of topCategories) {
       const existing = map.get(tc.category)
       if (existing) {
-        existing.thisMonth = tc.total
+        map.set(tc.category, { ...existing, thisMonth: tc.total })
       } else {
         map.set(tc.category, { category: tc.category, thisMonth: tc.total, avgMonthly: 0, lastMonth: 0, suggested: 0, trendData: [] })
       }

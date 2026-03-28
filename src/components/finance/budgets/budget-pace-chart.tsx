@@ -40,7 +40,7 @@ export function BudgetPaceChart({
           <ComposedChart data={data} margin={{ top: 5, right: 16, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={border} vertical={false} />
             <XAxis dataKey="day" tick={{ fontSize: 10, fill: foregroundMuted }} tickLine={false} axisLine={false} ticks={buildXTicks(daysInMonth, dayOfMonth)} />
-            <YAxis tick={{ fontSize: 10, fill: foregroundMuted }} tickFormatter={(v) => `$${(v / 1000).toFixed(1)}k`} axisLine={false} tickLine={false} domain={[0, maxY]} width={48} />
+            <YAxis tick={{ fontSize: 10, fill: foregroundMuted }} tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`} axisLine={false} tickLine={false} domain={[0, maxY]} width={48} />
             <ReferenceLine y={totalBudgeted} stroke={foregroundMuted} strokeDasharray="8 4" strokeWidth={1} label={{ value: `Budget ${formatCurrency(totalBudgeted, "USD", 0)}`, position: "right", fontSize: 9, fill: foregroundMuted }} />
             <Line type="monotone" dataKey="ideal" stroke={foregroundMuted} strokeDasharray="6 4" strokeWidth={1.5} dot={false} name="Budget Pace" connectNulls={false} animationDuration={800} />
             <Area type="monotone" dataKey="actual" fill={dynamicColor} fillOpacity={0.06} stroke="none" connectNulls={false} animationDuration={800} />

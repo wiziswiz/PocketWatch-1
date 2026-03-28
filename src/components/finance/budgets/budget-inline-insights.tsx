@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import type { BudgetInsight } from "./budget-helpers"
+import type { BudgetInsight } from "./budget-types"
 
 interface BudgetInlineInsightsProps {
   insights: BudgetInsight[]

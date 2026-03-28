@@ -59,7 +59,7 @@ export function BudgetCreateModal({ isOpen, onClose, existingBudgets, suggestion
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={handleClose}>
-      <div className="bg-card border border-card-border w-full max-w-md rounded-2xl overflow-hidden" style={{ boxShadow: "var(--shadow-lg)" }} onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="budget-modal-title" className="bg-card border border-card-border w-full max-w-md rounded-2xl overflow-hidden" style={{ boxShadow: "var(--shadow-lg)" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-card-border">
           <div className="flex items-center gap-2">
             {step === 2 && (
@@ -67,7 +67,7 @@ export function BudgetCreateModal({ isOpen, onClose, existingBudgets, suggestion
                 <span className="material-symbols-rounded text-foreground-muted" style={{ fontSize: 18 }}>arrow_back</span>
               </button>
             )}
-            <h2 className="text-base font-semibold text-foreground">{step === 1 ? "Create Budget" : "Set Amount"}</h2>
+            <h2 id="budget-modal-title" className="text-base font-semibold text-foreground">{step === 1 ? "Create Budget" : "Set Amount"}</h2>
           </div>
           <button onClick={handleClose} className="p-1 rounded-md hover:bg-foreground/5 transition-colors">
             <span className="material-symbols-rounded text-foreground-muted" style={{ fontSize: 18 }}>close</span>
@@ -122,7 +122,7 @@ export function BudgetCreateModal({ isOpen, onClose, existingBudgets, suggestion
               </div>
 
               {suggestedAmount > 0 && (
-                <input type="range" min={sliderMin} max={sliderMax} step={10} value={numAmount || suggestedAmount} onChange={(e) => setAmount(e.target.value)} className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary" style={{ background: `linear-gradient(to right, var(--primary) ${((numAmount - sliderMin) / (sliderMax - sliderMin)) * 100}%, var(--card-border) 0%)` }} />
+                <input type="range" min={sliderMin} max={sliderMax} step={10} value={numAmount || suggestedAmount} onChange={(e) => setAmount(e.target.value)} className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary" style={{ background: `linear-gradient(to right, var(--primary) ${Math.min(100, Math.max(0, ((numAmount - sliderMin) / (sliderMax - sliderMin)) * 100))}%, var(--card-border) 0%)` }} />
               )}
 
               {selectedSuggestion && (
@@ -135,7 +135,7 @@ export function BudgetCreateModal({ isOpen, onClose, existingBudgets, suggestion
 
               {selectedTrend.length > 0 && (
                 <div className="flex items-center justify-center gap-2">
-                  <TrendBars data={selectedTrend} color={getCategoryMeta(selectedCategory).hex} />
+                  <BudgetSparkline data={selectedTrend} color={getCategoryMeta(selectedCategory).hex} barWidth={8} barGap={3} height={28} />
                   <span className="text-[9px] text-foreground-muted">{selectedTrend.filter((v) => v > 0).length} months of data</span>
                 </div>
               )}
@@ -155,21 +155,6 @@ export function BudgetCreateModal({ isOpen, onClose, existingBudgets, suggestion
         </div>
       </div>
     </div>
-  )
-}
-
-function TrendBars({ data, color }: { data: number[]; color: string }) {
-  const last6 = data.slice(-6)
-  if (last6.length === 0) return null
-  const max = Math.max(...last6, 1)
-  const barW = 8, gap = 3, h = 28, w = last6.length * (barW + gap) - gap
-  return (
-    <svg width={w} height={h}>
-      {last6.map((val, i) => {
-        const barH = Math.max((val / max) * h, 2)
-        return <rect key={i} x={i * (barW + gap)} y={h - barH} width={barW} height={barH} rx={2} fill={color} opacity={i === last6.length - 1 ? 1 : 0.35} />
-      })}
-    </svg>
   )
 }
 

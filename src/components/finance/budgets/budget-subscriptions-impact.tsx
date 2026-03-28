@@ -36,7 +36,7 @@ export function BudgetSubscriptionsImpact({ subscriptions, monthlyTotal, totalBu
             <div key={sub.merchantName} className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 bg-foreground/5 text-[9px] font-bold text-foreground-muted overflow-hidden">
-                  {sub.logoUrl ? <img src={sub.logoUrl} alt="" className="w-full h-full object-cover rounded-md" /> : sub.merchantName.slice(0, 2).toUpperCase()}
+                  {sub.logoUrl ? <img src={sub.logoUrl} alt="" className="w-full h-full object-cover rounded-md" onError={(e) => { e.currentTarget.style.display = "none" }} /> : sub.merchantName.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs text-foreground truncate">{sub.merchantName}</p>
