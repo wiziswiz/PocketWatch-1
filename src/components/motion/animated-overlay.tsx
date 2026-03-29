@@ -46,7 +46,7 @@ export function AnimatedOverlay({
   useEffect(() => {
     if (!open) return
     document.addEventListener("keydown", handleKeyDown)
-    contentRef.current?.focus()
+    contentRef.current?.focus({ preventScroll: true })
 
     // Prevent background scrolling
     const prev = document.body.style.overflow
