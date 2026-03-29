@@ -251,7 +251,14 @@ export function useAIRebuild() {
                 status: "complete",
                 summary: data.summary as RebuildSummary,
               }))
-              qc.invalidateQueries({ queryKey: financeKeys.all })
+              // Targeted invalidation — don't wipe review queue/count
+              qc.invalidateQueries({ queryKey: [...financeKeys.all, "transactions"] })
+              qc.invalidateQueries({ queryKey: financeKeys.insights() })
+              qc.invalidateQueries({ queryKey: financeKeys.deepInsights() })
+              qc.invalidateQueries({ queryKey: financeKeys.uncategorized() })
+              qc.invalidateQueries({ queryKey: [...financeKeys.all, "spending-by-month"] })
+              qc.invalidateQueries({ queryKey: financeKeys.budgets() })
+              qc.invalidateQueries({ queryKey: [...financeKeys.all, "ai-categorize"] })
               break
             case "error":
               if (data.batchIndex !== undefined) break // batch-level, continue
