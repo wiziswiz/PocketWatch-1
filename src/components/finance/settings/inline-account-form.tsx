@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
-import { useCreateManualAccount } from "@/hooks/finance"
+import { useCreateManualAccount } from "@/hooks/finance/use-statements"
 
 interface Props {
   onCreated: (account: { id: string; name: string }) => void

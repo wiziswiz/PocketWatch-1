@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
-import { useManualAccounts, useDeleteManualAccount } from "@/hooks/finance"
+import { useManualAccounts, useDeleteManualAccount } from "@/hooks/finance/use-statements"
 import { CollapsibleSection } from "@/components/ui/collapsible-section"
 
 const TYPE_LABELS: Record<string, string> = {
