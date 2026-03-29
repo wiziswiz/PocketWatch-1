@@ -19,8 +19,7 @@ import { InstitutionAccordion } from "@/components/finance/accounts/institution-
 import { ReconnectBanner } from "@/components/finance/accounts/reconnect-banner"
 import { AccountTransactions } from "@/components/finance/accounts/account-transactions"
 import { AccountLiabilityDetails } from "@/components/finance/accounts/account-liability-details"
-import { StatementImportSection } from "@/components/finance/accounts/statement-import-section"
-import { InlineAccountForm } from "@/components/finance/settings/inline-account-form"
+import { StatementUploadFlow } from "@/components/finance/upload/statement-upload-flow"
 import { StaggerChildren, StaggerItem } from "@/components/motion/stagger-children"
 
 const TYPE_ORDER = ["checking", "savings", "credit", "business_credit", "investment", "brokerage", "loan", "mortgage"]
@@ -31,7 +30,6 @@ export default function FinanceAccountsPage() {
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null)
   const [txPage, setTxPage] = useState(1)
   const [disconnecting, setDisconnecting] = useState<{ id: string; name: string } | null>(null)
-  const [showManualForm, setShowManualForm] = useState(false)
 
   const { data: institutions, isLoading, isError } = useFinanceAccounts()
   const exchangeToken = useExchangePlaidToken()
@@ -146,13 +144,6 @@ export default function FinanceAccountsPage() {
           buttonLabel="SimpleFIN"
         />
       )}
-      <button
-        onClick={() => setShowManualForm(!showManualForm)}
-        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium border border-dashed border-card-border text-foreground-muted hover:text-foreground hover:border-primary/40 transition-colors"
-      >
-        <span className="material-symbols-rounded" style={{ fontSize: 14 }}>edit_note</span>
-        Manual
-      </button>
     </div>
   )
 
@@ -177,13 +168,6 @@ export default function FinanceAccountsPage() {
   return (
     <div className="space-y-6">
       {pageHeader}
-
-      {showManualForm && (
-        <InlineAccountForm
-          onCreated={() => setShowManualForm(false)}
-          onCancel={() => setShowManualForm(false)}
-        />
-      )}
 
       {isConnecting && (
         <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-center gap-3 animate-pulse">
@@ -279,8 +263,8 @@ export default function FinanceAccountsPage() {
         />
       )}
 
-      {/* Statement Import */}
-      <StatementImportSection />
+      {/* Statement Upload */}
+      <StatementUploadFlow />
 
       <ConfirmDialog
         open={!!disconnecting}

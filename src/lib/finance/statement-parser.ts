@@ -70,6 +70,16 @@ function splitLines(text: string): string[] {
 
 // ─── Date Parsing ──────────────────────────────────────────────
 
+function validateDateParts(month: number, day: number, year: number): Date | null {
+  if (month < 1 || month > 12) return null
+  if (day < 1 || day > 31) return null
+  if (year < 1990 || year > 2030) return null
+  const date = new Date(Date.UTC(year, month - 1, day))
+  // Verify the date didn't overflow (e.g., Feb 30 → Mar 2)
+  if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null
+  return date
+}
+
 function parseDate(str: string): Date | null {
   const trimmed = str.trim()
 
@@ -77,24 +87,21 @@ function parseDate(str: string): Date | null {
   const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
   if (slashMatch) {
     const [, m, d, y] = slashMatch
-    const date = new Date(Date.UTC(parseInt(y), parseInt(m) - 1, parseInt(d)))
-    return isNaN(date.getTime()) ? null : date
+    return validateDateParts(parseInt(m), parseInt(d), parseInt(y))
   }
 
   // YYYY-MM-DD
   const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/)
   if (isoMatch) {
     const [, y, m, d] = isoMatch
-    const date = new Date(Date.UTC(parseInt(y), parseInt(m) - 1, parseInt(d)))
-    return isNaN(date.getTime()) ? null : date
+    return validateDateParts(parseInt(m), parseInt(d), parseInt(y))
   }
 
   // MM-DD-YYYY
   const dashMatch = trimmed.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
   if (dashMatch) {
     const [, m, d, y] = dashMatch
-    const date = new Date(Date.UTC(parseInt(y), parseInt(m) - 1, parseInt(d)))
-    return isNaN(date.getTime()) ? null : date
+    return validateDateParts(parseInt(m), parseInt(d), parseInt(y))
   }
 
   return null

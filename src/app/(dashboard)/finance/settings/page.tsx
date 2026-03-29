@@ -27,8 +27,7 @@ import type { FinanceVerificationState } from "@/lib/finance/verification-types"
 import { SettingsProviderCards } from "@/components/finance/settings/settings-provider-cards"
 import { SettingsPlaidKeys } from "@/components/finance/settings/settings-plaid-keys"
 import { StatementCoverageContent } from "@/components/finance/settings/statement-coverage-card"
-import { StatementUploadInline } from "@/components/finance/settings/statement-upload-inline"
-import { ManualAccountsSection } from "@/components/finance/settings/manual-accounts-section"
+import { StatementUploadFlow } from "@/components/finance/upload/statement-upload-flow"
 
 function deriveVerificationState(payload?: Partial<FinanceCredentialVerificationResponse> | null): {
   verificationState: FinanceVerificationState
@@ -324,11 +323,9 @@ export default function FinanceSettingsPage() {
         className="rounded-xl"
       >
         <div className="pt-4">
-          <StatementUploadInline />
+          <StatementUploadFlow />
         </div>
       </CollapsibleSection>
-
-      <ManualAccountsSection />
 
       {syncStatus?.institutions && syncStatus.institutions.length > 0 && (
         <CollapsibleSection

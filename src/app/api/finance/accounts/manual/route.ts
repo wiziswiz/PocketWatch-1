@@ -3,6 +3,7 @@ import { apiError } from "@/lib/api-error"
 import { db } from "@/lib/db"
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod/v4"
+import { randomBytes } from "crypto"
 
 const VALID_TYPES = ["checking", "savings", "credit"] as const
 
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const externalId = `manual_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    const externalId = `manual_${Date.now()}_${randomBytes(6).toString("hex")}`
 
     const account = await db.financeAccount.create({
       data: {

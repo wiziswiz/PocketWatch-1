@@ -14,7 +14,7 @@ export function generateExternalId(accountId: string, row: ParsedRow, seq: numbe
   const hash = createHash("sha256")
     .update(`${accountId}|${dateStr}|${row.amount}|${row.name}|${seq}`)
     .digest("hex")
-    .slice(0, 16)
+    .slice(0, 32) // 32 hex chars = 128-bit collision resistance
   return `stmt_${hash}`
 }
 
@@ -43,7 +43,7 @@ export async function findFuzzyDuplicates(
     where: {
       userId,
       accountId,
-      provider: { in: ["plaid", "simplefin"] },
+      provider: { not: "statement" }, // Match against synced providers (plaid, simplefin) — skip other statement uploads (exact dedup handles those)
       date: { gte: minDate, lte: maxDate },
     },
     select: { date: true, amount: true, name: true },

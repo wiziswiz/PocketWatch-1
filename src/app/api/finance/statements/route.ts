@@ -3,17 +3,14 @@ import { apiError } from "@/lib/api-error"
 import { db } from "@/lib/db"
 import { NextResponse, type NextRequest } from "next/server"
 import { parseStatement } from "@/lib/finance/statement-parser"
-import { parsePDFStatement } from "@/lib/finance/statement-pdf-parser"
+import { parsePDFFromFile } from "@/lib/finance/statement-pdf-parser"
 import { categorizeTransaction, cleanMerchantName } from "@/lib/finance/categorize"
 import { generateExternalId, assignSequences, findFuzzyDuplicates } from "@/lib/finance/statement-dedup"
-import { decryptCredential } from "@/lib/finance/crypto"
-import type { AIProviderType } from "@/lib/finance/ai-providers"
 import type { StatementUploadResult, BankFormat, ParsedRow } from "@/lib/finance/statement-types"
 
 export const maxDuration = 120
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
-const AI_SERVICES = ["ai_claude_cli", "ai_claude_api", "ai_openai", "ai_gemini"]
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser()
@@ -133,12 +130,18 @@ export async function POST(req: NextRequest) {
     }
 
     if (inserted > 0) {
-      const { saveFinanceSnapshot, backfillHistoricalSnapshots } = await import(
-        "@/lib/finance/sync/snapshots"
-      )
-      await db.financeSnapshot.deleteMany({ where: { userId: user.id } })
-      await saveFinanceSnapshot(user.id)
-      await backfillHistoricalSnapshots(user.id)
+      // Rebuild snapshots — non-fatal if this fails (transactions are already saved)
+      try {
+        const { saveFinanceSnapshot, backfillHistoricalSnapshots } = await import(
+          "@/lib/finance/sync/snapshots"
+        )
+        await db.financeSnapshot.deleteMany({ where: { userId: user.id } })
+        await saveFinanceSnapshot(user.id)
+        await backfillHistoricalSnapshots(user.id)
+      } catch (snapshotErr) {
+        // Snapshots will be rebuilt on next dashboard load — don't fail the upload
+        console.error("[statements] Snapshot rebuild failed after insert:", snapshotErr)
+      }
     }
 
     const result: StatementUploadResult = {
@@ -147,43 +150,13 @@ export async function POST(req: NextRequest) {
       inserted,
       skipped,
       duplicates,
-      errors: parseErrors.slice(0, 10),
+      errors: parseErrors.length > 20
+        ? [...parseErrors.slice(0, 20), `...and ${parseErrors.length - 20} more`]
+        : parseErrors,
     }
 
     return NextResponse.json(result)
   } catch (err) {
     return apiError("F8019", "Failed to process statement", 500, err)
   }
-}
-
-async function parsePDFFromFile(
-  file: File,
-  userId: string
-): Promise<{ rows: ParsedRow[]; errors: string[] }> {
-  const pdfParse = (await import("pdf-parse")).default
-  const buffer = Buffer.from(await file.arrayBuffer())
-  const { text } = await pdfParse(buffer)
-
-  if (!text || text.trim().length < 20) {
-    return { rows: [], errors: ["Could not extract text from PDF — the file may be image-only or corrupt"] }
-  }
-
-  const providerKey = await db.externalApiKey.findFirst({
-    where: { userId, serviceName: { in: AI_SERVICES }, verified: true },
-    orderBy: { updatedAt: "desc" },
-  })
-
-  const providerConfig = providerKey
-    ? {
-        provider: providerKey.serviceName as AIProviderType,
-        apiKey: await decryptCredential(providerKey.apiKeyEnc),
-        model: providerKey.model ?? undefined,
-      }
-    : {
-        provider: "ai_claude_cli" as AIProviderType,
-        apiKey: "enabled",
-        model: undefined,
-      }
-
-  return parsePDFStatement(text, providerConfig)
 }
