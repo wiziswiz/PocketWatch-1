@@ -124,8 +124,12 @@ function clearStorage(): void {
 export function useAIRebuild() {
   const [state, setState] = useState<AIRebuildState>(INITIAL_STATE)
   const abortRef = useRef<AbortController | null>(null)
+  const summaryRef = useRef<RebuildSummary | null>(null)
   const qc = useQueryClient()
   const checkedServerRef = useRef(false)
+
+  // Keep summaryRef in sync so start() can read it without stale closures
+  summaryRef.current = state.summary
 
   // On mount: check server for completed rebuild, or restore from localStorage
   useEffect(() => {
@@ -176,7 +180,7 @@ export function useAIRebuild() {
 
   const start = useCallback(async (mode: "uncategorized" | "full", dryRun = false, retryMerchants?: string[]) => {
     const isRetry = !!retryMerchants?.length
-    const prevSummary = isRetry ? state.summary : null
+    const prevSummary = isRetry ? summaryRef.current : null
 
     abortRef.current?.abort()
     const controller = new AbortController()
