@@ -29,6 +29,7 @@ export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: Sidebar
   const reduce = useReducedMotion()
   const {
     prefs,
+    hydrated,
     isEditing,
     setIsEditing,
     moveItem,
@@ -60,7 +61,7 @@ export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: Sidebar
             initial="hidden"
             animate="visible"
             exit="hidden"
-            transition={reduce ? { duration: 0 } : { duration: durations.base }}
+            transition={reduce || !hydrated ? { duration: 0 } : { duration: durations.base }}
           />
         )}
       </AnimatePresence>
@@ -104,8 +105,10 @@ export const Sidebar = memo(function Sidebar({ isOpen = true, onClose }: Sidebar
           </div>
         </div>
 
-        {/* Navigation or Edit Mode */}
-        {isEditing ? (
+        {/* Navigation or Edit Mode — deferred until client prefs hydrate to prevent mismatch */}
+        {!hydrated ? (
+          <nav className="flex-1 py-4 px-3" />
+        ) : isEditing ? (
           <SidebarEditControls
             prefs={prefs}
             moveItem={moveItem}

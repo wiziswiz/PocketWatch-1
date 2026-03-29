@@ -189,10 +189,12 @@ export function getAllItemsOrdered(categoryKey: string, prefs: SidebarPrefs): Na
 
 export function useSidebarPrefs() {
   const [prefs, setPrefs] = useState<SidebarPrefs>(buildDefaultPrefs)
+  const [hydrated, setHydrated] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
 
   useEffect(() => {
     setPrefs(loadPrefs())
+    setHydrated(true)
   }, [])
 
   const update = useCallback((updater: (prev: SidebarPrefs) => SidebarPrefs) => {
@@ -254,6 +256,7 @@ export function useSidebarPrefs() {
 
   return {
     prefs,
+    hydrated,
     isEditing,
     setIsEditing,
     moveItem,
