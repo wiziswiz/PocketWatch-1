@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   // Mode 1: Find marker file to resolve native picker path
   if (body.action === "resolve" && typeof body.marker === "string") {
     const markerName = `.pwmarker-${body.marker}`
-    const found = await findMarker(home, markerName, 3)
+    const found = await findMarker(home, markerName, 8)
     if (found) {
       await unlink(join(found, markerName)).catch(() => {})
       if (!checkHome(found, home)) return apiError("B5002", "Path must be within home directory", 403)
@@ -71,7 +71,8 @@ async function findMarker(dir: string, markerName: string, maxDepth: number): Pr
       if (e.name === markerName && !e.isDirectory()) return dir
     }
     for (const e of entries) {
-      if (e.isDirectory() && !e.isSymbolicLink() && !e.name.startsWith(".")) {
+      const skip = new Set(["node_modules", "Library", ".Trash", ".git", ".cache"])
+      if (e.isDirectory() && !e.isSymbolicLink() && !skip.has(e.name)) {
         const found = await findMarker(join(dir, e.name), markerName, maxDepth - 1)
         if (found) return found
       }
