@@ -77,6 +77,13 @@ export const SUPPORTED_SERVICES = [
     description: "zkSync Era transaction history and contract data",
     keyUrl: "https://era.zksync.network/",
   },
+  {
+    id: "codex",
+    label: "Codex",
+    domain: "codex.io",
+    description: "Unified API for token prices, wallet balances, and analytics across all chains",
+    keyUrl: "https://www.codex.io/",
+  },
 ] as const
 
 export const CURRENCIES = [

@@ -24,6 +24,8 @@ const VALID_SERVICES = [
   // Etherscan-compatible block explorers
   "bscscan", "arbiscan", "basescan", "polygonscan", "optimism_etherscan",
   "lineascan", "scrollscan", "zksync_explorer",
+  // Unified multi-chain provider
+  "codex",
 ]
 
 async function getKeyHint(apiKeyEnc: string): Promise<string> {

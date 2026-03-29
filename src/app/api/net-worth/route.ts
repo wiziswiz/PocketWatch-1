@@ -55,14 +55,41 @@ export async function GET() {
 
     const fiatNetWorth = fiatCash + fiatInvestments - fiatDebt
 
-    // ─── Portfolio: latest snapshot value ───
+    // ─── Portfolio: latest live snapshot value ───
+    // Prefer live_refresh snapshots (from actual provider fetches) over
+    // reconstructed ones, which can undercount by missing chains/providers.
     const latestSnapshot = await db.portfolioSnapshot.findFirst({
+      where: { userId: user.id, source: "live_refresh" },
+      orderBy: { createdAt: "desc" },
+      select: { totalValue: true, createdAt: true, metadata: true },
+    })
+    // Fallback to any snapshot if no live_refresh exists
+    const fallbackSnapshot = latestSnapshot ?? await db.portfolioSnapshot.findFirst({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
-      select: { totalValue: true, createdAt: true },
+      select: { totalValue: true, createdAt: true, metadata: true },
     })
 
-    const cryptoValue = latestSnapshot?.totalValue ?? 0
+    // Use the on-chain value from the snapshot, then add exchange balances
+    // from the latest exchange snapshot so exchange holdings aren't stale
+    let cryptoValue = fallbackSnapshot?.totalValue ?? 0
+
+    // If the live_refresh snapshot doesn't include exchange data, add latest exchange snapshot
+    const snapshotMeta = fallbackSnapshot?.metadata
+      ? (typeof fallbackSnapshot.metadata === "string" ? JSON.parse(fallbackSnapshot.metadata) : fallbackSnapshot.metadata)
+      : null
+    const snapshotHasExchange = (snapshotMeta?.exchangeTotalValue ?? 0) > 0
+
+    if (!snapshotHasExchange) {
+      const latestExchangeSnap = await db.exchangeBalanceSnapshot.findFirst({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+        select: { totalValue: true },
+      })
+      if (latestExchangeSnap) {
+        cryptoValue += latestExchangeSnap.totalValue
+      }
+    }
 
     // ─── Combined ───
     const totalNetWorth = fiatNetWorth + cryptoValue

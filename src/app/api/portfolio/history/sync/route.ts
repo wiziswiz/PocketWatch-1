@@ -41,7 +41,7 @@ function computeProgressPct(progress: SyncProgressRow[]): number {
   let completedPhaseWork = 0
   const totalPhaseWork = progress.length * TOTAL_PHASES
   for (const p of progress) {
-    if (p.isComplete) {
+    if (p.isComplete || p.phase === "needs_key" || p.phase === "skipped") {
       completedPhaseWork += TOTAL_PHASES
     } else if (p.chain === ZERION_MULTI_CHAIN) {
       // Zerion: either fetching (50%) or done
@@ -294,6 +294,8 @@ export async function GET(req: NextRequest) {
 
     const totalSyncs = progress.length
     const processedSyncs = progress.filter((p) => p.isComplete).length
+    // Syncs stuck in needs_key or skipped are effectively done — exclude from actionable total
+    const terminalNonComplete = progress.filter((p) => !p.isComplete && (p.phase === "needs_key" || p.phase === "skipped")).length
     const failedSyncs = progress.filter((p) => p.isComplete && !!p.lastErrorCode && p.phase !== "skipped" && p.phase !== "needs_key").length
     const progressPct = computeProgressPct(progress)
     const failedDetails = summarizeFailures(progress)
@@ -315,7 +317,7 @@ export async function GET(req: NextRequest) {
       failedSyncs,
       failedDetails,
       missingKeys,
-      allComplete: totalSyncs > 0 && processedSyncs === totalSyncs,
+      allComplete: totalSyncs > 0 && (processedSyncs + terminalNonComplete) === totalSyncs,
       throttled,
       nextAdvanceAt,
       budgetState: {

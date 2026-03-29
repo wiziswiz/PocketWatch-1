@@ -183,7 +183,10 @@ export const CHAIN_REGISTRY: Record<string, ChainMeta> = {
 
 // ─── Derived exports ───
 
-export const SUPPORTED_CHAINS = Object.values(CHAIN_REGISTRY)
+// Deduplicate by id so aliases (e.g. SOLANA → SOL) don't appear twice in UI
+export const SUPPORTED_CHAINS = Object.values(
+  Object.fromEntries(Object.values(CHAIN_REGISTRY).map((c) => [c.id, c]))
+)
 export const SUPPORTED_CHAIN_IDS = Object.keys(CHAIN_REGISTRY)
 export const EVM_CHAIN_IDS = SUPPORTED_CHAINS.filter((c) => c.isEvm).map((c) => c.id)
 

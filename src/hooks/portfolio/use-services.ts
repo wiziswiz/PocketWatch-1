@@ -83,7 +83,6 @@ export function useDeleteExternalService() {
         body: JSON.stringify(body),
       }),
     onSuccess: async () => {
-      await triggerClearAll()
       qc.invalidateQueries({ queryKey: portfolioKeys.all })
       qc.invalidateQueries({ queryKey: COMBINED_NET_WORTH_KEY })
     },
@@ -141,7 +140,6 @@ export function useRemoveExchangeConnection() {
         body: JSON.stringify(body),
       }),
     onSuccess: async () => {
-      await triggerClearAll()
       qc.invalidateQueries({ queryKey: portfolioKeys.all })
       qc.invalidateQueries({ queryKey: COMBINED_NET_WORTH_KEY })
     },

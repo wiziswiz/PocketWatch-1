@@ -111,7 +111,8 @@ export function useRemoveAccount() {
         body: JSON.stringify(body),
       }),
     onSuccess: async () => {
-      await triggerClearAll()
+      // Only invalidate queries — do NOT call triggerClearAll() which wipes
+      // ALL wallets, API keys, and exchange connections from the database
       qc.invalidateQueries({ queryKey: portfolioKeys.all })
       qc.invalidateQueries({ queryKey: COMBINED_NET_WORTH_KEY })
     },

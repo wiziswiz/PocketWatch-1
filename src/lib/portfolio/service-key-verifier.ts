@@ -360,6 +360,44 @@ async function verifyCoinGeckoKey(apiKey: string): Promise<ServiceVerifyResult> 
   return fail("invalid_key", "Invalid CoinGecko API key")
 }
 
+async function verifyCodexKey(apiKey: string): Promise<ServiceVerifyResult> {
+  // Codex enforces origin-based restrictions on their GraphQL API, so server-side
+  // verification requests are rejected with "unauthorized origin". Instead, validate
+  // the key format and attempt a live query — if the error is specifically about
+  // origin (not the key itself), the key is valid.
+  if (!/^[a-f0-9]{30,}$/i.test(apiKey)) {
+    return fail("invalid_key", "Invalid Codex API key format")
+  }
+
+  try {
+    const { Codex } = await import("@codex-data/sdk")
+    const codex = new Codex(apiKey)
+    const result = await Promise.race([
+      codex.queries.getNetworkStats({ networkId: 1 }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), VERIFY_TIMEOUT_MS)
+      ),
+    ])
+    if (result) return ok("Codex key verified")
+    return ok("Codex key verified")
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    const lower = msg.toLowerCase()
+    // "unauthorized origin" means the key itself is valid but the server
+    // origin isn't whitelisted — treat as verified
+    if (lower.includes("unauthorized origin")) {
+      return ok("Codex key saved (origin-restricted keys are verified at runtime)")
+    }
+    if (lower.includes("invalid api key") || lower.includes("invalid key")) {
+      return fail("invalid_key", "Invalid Codex API key")
+    }
+    if (lower.includes("rate limit") || lower.includes("429")) {
+      return fail("rate_limited", "Codex rate limit reached while verifying")
+    }
+    return fail("network_error", networkFailureMessage(err))
+  }
+}
+
 export async function verifyServiceKey(
   serviceName: string,
   apiKey: string,
@@ -374,6 +412,7 @@ export async function verifyServiceKey(
   if (normalized === "helius") return verifyHeliusKey(trimmed)
   if (normalized === "moralis") return verifyMoralisKey(trimmed)
   if (normalized === "coingecko") return verifyCoinGeckoKey(trimmed)
+  if (normalized === "codex") return verifyCodexKey(trimmed)
 
   // Etherscan-compatible explorers (bscscan, arbiscan, lineascan, etc.)
   const explorer = EXPLORER_APIS[normalized]

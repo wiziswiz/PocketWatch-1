@@ -57,10 +57,18 @@ async function buildBlockchainBalancesResponse(userId: string, chainFilter: stri
       if (!perAccount[chain][wallet.address]) perAccount[chain][wallet.address] = { assets: {} }
 
       const symbol = pos.symbol || pos.id
-      perAccount[chain][wallet.address].assets[symbol] = {
-        amount: String(pos.quantity),
-        usd_value: String(pos.value),
-        value: String(pos.value),
+      const existing = perAccount[chain][wallet.address].assets[symbol]
+      if (existing) {
+        // Accumulate values for the same symbol (e.g. wallet + staked positions)
+        existing.amount = String(parseFloat(existing.amount) + pos.quantity)
+        existing.usd_value = String(parseFloat(existing.usd_value) + pos.value)
+        existing.value = existing.usd_value
+      } else {
+        perAccount[chain][wallet.address].assets[symbol] = {
+          amount: String(pos.quantity),
+          usd_value: String(pos.value),
+          value: String(pos.value),
+        }
       }
 
       if (!totalsAssets[symbol]) {
@@ -77,7 +85,11 @@ async function buildBlockchainBalancesResponse(userId: string, chainFilter: stri
     }
   }
 
-  return { per_account: perAccount, icons, totals: { assets: totalsAssets } }
+  // Include all tracked wallet addresses so the frontend can show them
+  // in dropdowns even if providers returned no positions for them
+  const trackedAddresses = wallets.map((w) => w.address)
+
+  return { per_account: perAccount, icons, totals: { assets: totalsAssets }, trackedAddresses }
 }
 
 /**
@@ -101,10 +113,22 @@ export async function GET(request: NextRequest) {
   try {
     const result = await buildBlockchainBalancesResponse(user.id, chainFilter)
 
+    // If providers returned empty but we have a stale cache, serve it
+    const isEmpty = Object.keys((result as any).per_account ?? {}).length === 0
+    if (isEmpty && cached) {
+      const refreshMeta = await getRefreshMeta(user.id)
+      return NextResponse.json({ ...cached.data, meta: { fromCache: true, staleReason: "providers_empty", ...refreshMeta } })
+    }
+
     cache.set(cacheKey, { data: result, timestamp: Date.now() })
     const refreshMeta = await getRefreshMeta(user.id)
     return NextResponse.json({ ...result, meta: { fromCache: false, ...refreshMeta } })
   } catch (error) {
+    // On error, serve stale cache if available
+    if (cached) {
+      const refreshMeta = await getRefreshMeta(user.id)
+      return NextResponse.json({ ...cached.data, meta: { fromCache: true, staleReason: "provider_error", ...refreshMeta } })
+    }
     const msg = error instanceof Error ? error.message : "Unknown error"
     if (isProviderThrottleError(error) || msg.includes("throttled") || msg.includes("rate limit")) {
       return apiError("E9056", "Balance providers temporarily rate-limited. Try again in a moment.", 503, error)

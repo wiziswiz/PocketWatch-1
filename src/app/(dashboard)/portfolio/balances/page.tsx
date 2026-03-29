@@ -47,6 +47,30 @@ export default function BlockchainBalancesPage() {
     return map
   }, [accountsData])
 
+  // Collect all tracked wallet addresses so the dropdown includes wallets
+  // even when providers returned no balance data for them
+  const allTrackedWallets = useMemo(() => {
+    const set = new Set<string>()
+    // Primary source: trackedAddresses from blockchain balances API
+    const tracked = (data as any)?.trackedAddresses
+    if (Array.isArray(tracked)) {
+      for (const addr of tracked) {
+        if (typeof addr === "string") set.add(addr.toLowerCase())
+      }
+    }
+    // Fallback: accounts data (per-chain map)
+    if (set.size === 0 && accountsData && typeof accountsData === "object") {
+      for (const chainAccounts of Object.values(accountsData as Record<string, unknown[]>)) {
+        if (!Array.isArray(chainAccounts)) continue
+        for (const acct of chainAccounts) {
+          const addr = (acct as any)?.address as string
+          if (addr) set.add(addr.toLowerCase())
+        }
+      }
+    }
+    return set
+  }, [data, accountsData])
+
   // Parse per-wallet balances
   const { rows, totalValue, uniqueWallets, uniqueChains } = useMemo(() => {
     if (!data) return { rows: [] as BalanceRow[], totalValue: 0, uniqueWallets: [] as string[], uniqueChains: [] as string[] }
@@ -79,6 +103,11 @@ export default function BlockchainBalancesPage() {
       }
     }
 
+    // Include all tracked wallets in the dropdown even if they have no balance data
+    for (const addr of allTrackedWallets) {
+      walletSet.add(addr)
+    }
+
     const total = allRows.reduce((sum, a) => sum + a.usd_value, 0)
     const builtRows: BalanceRow[] = allRows.map((a) => ({
       ...a, displayName: a.asset, pctOfTotal: total > 0 ? (a.usd_value / total) * 100 : 0,
@@ -91,7 +120,7 @@ export default function BlockchainBalancesPage() {
       uniqueWallets: Array.from(walletSet).sort((a, b) => (walletTotals.get(b) || 0) - (walletTotals.get(a) || 0)),
       uniqueChains: Array.from(chainSet).sort(),
     }
-  }, [data, walletLabels])
+  }, [data, walletLabels, allTrackedWallets])
 
   // Extract icon URLs from API response
   const iconMap = useMemo(() => {
