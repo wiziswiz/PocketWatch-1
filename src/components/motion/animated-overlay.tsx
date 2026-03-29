@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useCallback } from "react"
+import { createPortal } from "react-dom"
 import { motion, AnimatePresence, useReducedMotion } from "motion/react"
 import { fadeIn, scaleIn, springs, durations } from "@/lib/motion"
 import { cn } from "@/lib/utils"
@@ -58,7 +59,11 @@ export function AnimatedOverlay({
     }
   }, [open, handleKeyDown])
 
-  return (
+  // Portal to document.body to escape CSS containment contexts
+  // (e.g. `contain: layout style` on <main>) that break `position: fixed`
+  if (typeof document === "undefined") return null
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -100,6 +105,7 @@ export function AnimatedOverlay({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   )
 }
