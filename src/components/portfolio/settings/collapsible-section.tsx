@@ -36,7 +36,7 @@ export function CollapsibleSection({
             <p className="mt-1 text-foreground-muted text-xs">{subtitle}</p>
           </div>
         </button>
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {open && actions && <div className="flex items-center gap-2">{actions}</div>}
       </div>
       {open && children}
     </div>
