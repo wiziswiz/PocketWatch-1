@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
 interface DirEntry { name: string }
@@ -71,11 +72,18 @@ export function BackupDirectoryPicker({ initialPath, onSelect, onClose }: Backup
     const name = newFolderName.trim()
     if (!name) return
     const newPath = currentPath === "~" ? `~/${name}` : `${currentPath}/${name}`
-    const res = await fetch(`/api/backup/browse-dirs?path=${encodeURIComponent(newPath)}&create=true`)
-    if (res.ok) {
+    try {
+      const res = await fetch(`/api/backup/browse-dirs?path=${encodeURIComponent(newPath)}&create=true`)
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ message: "Failed to create folder" }))
+        toast.error(data.message ?? "Failed to create folder")
+        return
+      }
       setShowNewFolder(false)
       setNewFolderName("")
       fetchDirs(currentPath)
+    } catch {
+      toast.error("Failed to create folder")
     }
   }
 

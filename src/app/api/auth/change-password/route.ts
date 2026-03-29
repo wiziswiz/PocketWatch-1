@@ -183,11 +183,14 @@ async function refreshAutoBackupKeys(newPassword: string, newDekHex: string) {
     if (!setting) return
     const config = setting.value as Record<string, unknown>
     if (!config.enabled) return
-    config.wrappedDek = await encrypt(newDekHex)
+    // Derive all new values atomically before writing
+    const newWrappedDek = await encrypt(newDekHex)
     const salt = Array.from(crypto.getRandomValues(new Uint8Array(32))).map((b) => b.toString(16).padStart(2, "0")).join("")
-    config.wrappedBackupKey = await encrypt(await deriveKey("pw-backup:" + newPassword, salt))
-    config.backupKeySalt = salt
-    await db.settings.update({ where: { key: AUTO_BACKUP_KEY }, data: { value: JSON.parse(JSON.stringify(config)) } })
+    const newWrappedBackupKey = await encrypt(await deriveKey("pw-backup:" + newPassword, salt))
+    await db.settings.update({
+      where: { key: AUTO_BACKUP_KEY },
+      data: { value: JSON.parse(JSON.stringify({ ...config, wrappedDek: newWrappedDek, wrappedBackupKey: newWrappedBackupKey, backupKeySalt: salt })) },
+    })
   } catch (err) {
     console.error("[change-password] Failed to refresh auto-backup keys:", err)
   }

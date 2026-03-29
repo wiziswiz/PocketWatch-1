@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { readdir, mkdir } from "node:fs/promises"
+import { readdir, mkdir, lstat } from "node:fs/promises"
 import { resolve, dirname, sep } from "node:path"
 import { homedir } from "node:os"
 import { getCurrentUser } from "@/lib/auth"
@@ -33,6 +33,10 @@ export async function GET(req: NextRequest) {
   if (createDir) {
     try {
       await mkdir(resolvedDir, { recursive: true })
+      const stat = await lstat(resolvedDir)
+      if (!stat.isDirectory() || stat.isSymbolicLink()) {
+        return apiError("B5006", "Invalid directory target", 400)
+      }
     } catch {
       return apiError("B5003", "Failed to create directory", 500)
     }

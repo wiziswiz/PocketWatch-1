@@ -102,10 +102,11 @@ export async function POST(req: NextRequest) {
 
     // Store wrapped DEK so backup worker can run without an active session
     const session = await getSession()
-    if (session?.encryptedDek) {
-      const dekHex = await decrypt(session.encryptedDek)
-      config.wrappedDek = await encrypt(dekHex)
+    if (!session?.encryptedDek) {
+      return apiError("B3006", "Active vault session required to enable auto-backup. Please unlock your vault and try again.", 400)
     }
+    const dekHex = await decrypt(session.encryptedDek)
+    config.wrappedDek = await encrypt(dekHex)
   }
 
   // If disabling, clear all wrapped keys
