@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import {
   startRegistration,
   startAuthentication,
@@ -10,8 +10,11 @@ import {
 export function usePasskey() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [supported, setSupported] = useState(false)
 
-  const supported = typeof window !== "undefined" && browserSupportsWebAuthn()
+  useEffect(() => {
+    setSupported(browserSupportsWebAuthn())
+  }, [])
 
   const authenticate = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
     setError(null)
