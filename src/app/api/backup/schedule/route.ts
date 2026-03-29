@@ -7,10 +7,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { getCurrentUser, verifyPassword } from "@/lib/auth"
+import { getCurrentUser, getSession, verifyPassword } from "@/lib/auth"
 import { apiError } from "@/lib/api-error"
 import { db } from "@/lib/db"
-import { encrypt } from "@/lib/crypto"
+import { encrypt, decrypt } from "@/lib/crypto"
 
 const SETTINGS_KEY = "auto_backup"
 
@@ -23,6 +23,8 @@ interface AutoBackupConfig {
   wrappedBackupKey: string | null
   /** PBKDF2 salt used for key derivation from vault password (hex) */
   backupKeySalt: string | null
+  /** User DEK wrapped with ENCRYPTION_KEY — allows backup without active session */
+  wrappedDek: string | null
   lastBackupAt: string | null
   lastBackupError: string | null
 }
@@ -34,6 +36,7 @@ const DEFAULT_CONFIG: AutoBackupConfig = {
   directory: "~/.pocketwatch/backups",
   wrappedBackupKey: null,
   backupKeySalt: null,
+  wrappedDek: null,
   lastBackupAt: null,
   lastBackupError: null,
 }
@@ -96,12 +99,20 @@ export async function POST(req: NextRequest) {
     // encrypt() uses ENCRYPTION_KEY directly — no user DEK needed
     config.wrappedBackupKey = await encrypt(backupKeyHex)
     config.backupKeySalt = salt
+
+    // Store wrapped DEK so backup worker can run without an active session
+    const session = await getSession()
+    if (session?.encryptedDek) {
+      const dekHex = await decrypt(session.encryptedDek)
+      config.wrappedDek = await encrypt(dekHex)
+    }
   }
 
-  // If disabling, clear the wrapped key
+  // If disabling, clear all wrapped keys
   if (body.enabled === false) {
     config.wrappedBackupKey = null
     config.backupKeySalt = null
+    config.wrappedDek = null
   }
 
   // Update config fields

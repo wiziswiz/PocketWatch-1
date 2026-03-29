@@ -4,12 +4,14 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { cn, formatRelativeTime } from "@/lib/utils"
 import { useBackupSchedule, useUpdateBackupSchedule } from "@/hooks/use-backup"
+import { BackupDirectoryPicker } from "./backup-directory-picker"
 
 export function BackupScheduleCard() {
   const { data: schedule } = useBackupSchedule()
   const updateSchedule = useUpdateBackupSchedule()
   const [password, setPassword] = useState("")
   const [showPasswordInput, setShowPasswordInput] = useState(false)
+  const [showPicker, setShowPicker] = useState(false)
 
   const handleToggle = () => {
     if (!schedule?.enabled && !showPasswordInput) {
@@ -26,6 +28,14 @@ export function BackupScheduleCard() {
     if (!password) { toast.error("Password required"); return }
     updateSchedule.mutate({ enabled: true, password }, {
       onSuccess: () => { toast.success("Auto-backup enabled"); setShowPasswordInput(false); setPassword("") },
+      onError: (err) => toast.error(err.message),
+    })
+  }
+
+  const handleDirectorySelect = (path: string) => {
+    setShowPicker(false)
+    updateSchedule.mutate({ directory: path }, {
+      onSuccess: () => toast.success("Backup directory updated"),
       onError: (err) => toast.error(err.message),
     })
   }
@@ -78,36 +88,68 @@ export function BackupScheduleCard() {
       )}
 
       {schedule.enabled && (
-        <div className="flex items-center gap-3 flex-wrap">
-          <select
-            value={schedule.frequency}
-            onChange={(e) => updateSchedule.mutate({ frequency: e.target.value })}
-            className="px-2 py-1 text-xs bg-background border border-card-border rounded-lg"
-          >
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-          </select>
-          <span className="text-xs text-foreground-muted">
-            Keep <select
-              value={schedule.retentionCount}
-              onChange={(e) => updateSchedule.mutate({ retentionCount: Number(e.target.value) })}
-              className="px-1 py-0.5 bg-background border border-card-border rounded text-xs mx-1"
+        <div className="space-y-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <select
+              value={schedule.frequency}
+              onChange={(e) => updateSchedule.mutate({ frequency: e.target.value })}
+              className="px-2 py-1 text-xs bg-background border border-card-border rounded-lg"
             >
-              {[3, 5, 7, 14, 30].map((n) => <option key={n} value={n}>{n}</option>)}
-            </select> backups
-          </span>
-          {schedule.lastBackupAt && (
-            <span className="text-[10px] text-foreground-muted">
-              Last: {formatRelativeTime(schedule.lastBackupAt)}
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+            <span className="text-xs text-foreground-muted">
+              Keep <select
+                value={schedule.retentionCount}
+                onChange={(e) => updateSchedule.mutate({ retentionCount: Number(e.target.value) })}
+                className="px-1 py-0.5 bg-background border border-card-border rounded text-xs mx-1"
+              >
+                {[3, 5, 7, 14, 30].map((n) => <option key={n} value={n}>{n}</option>)}
+              </select> backups
             </span>
+          </div>
+
+          {/* Directory */}
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-rounded text-foreground-muted" style={{ fontSize: 16 }}>folder</span>
+            <span className="text-xs text-foreground-muted font-mono truncate flex-1" title={schedule.directory}>
+              {schedule.directory}
+            </span>
+            <button
+              onClick={() => setShowPicker(true)}
+              className="px-2 py-1 text-[11px] border border-card-border rounded-lg text-foreground-muted hover:text-foreground hover:border-card-border-hover transition-colors flex-shrink-0"
+            >
+              Browse
+            </button>
+          </div>
+
+          {/* Status */}
+          {schedule.lastBackupAt && !schedule.lastBackupError && (
+            <div className="flex items-center gap-1.5">
+              <span className="material-symbols-rounded text-success" style={{ fontSize: 14 }}>check_circle</span>
+              <span className="text-[11px] text-foreground-muted">
+                Last backup {formatRelativeTime(schedule.lastBackupAt)}
+              </span>
+            </div>
           )}
           {schedule.lastBackupError && (
-            <span className="text-[10px] text-error" title={schedule.lastBackupError}>
-              Last backup failed
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="material-symbols-rounded text-error" style={{ fontSize: 14 }}>error</span>
+              <span className="text-[11px] text-error" title={schedule.lastBackupError}>
+                Last backup failed — {schedule.lastBackupError.length > 60 ? schedule.lastBackupError.slice(0, 60) + "..." : schedule.lastBackupError}
+              </span>
+            </div>
           )}
         </div>
+      )}
+
+      {showPicker && (
+        <BackupDirectoryPicker
+          initialPath={schedule.directory}
+          onSelect={handleDirectorySelect}
+          onClose={() => setShowPicker(false)}
+        />
       )}
     </div>
   )

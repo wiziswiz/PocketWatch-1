@@ -9,10 +9,12 @@ import {
   provisionEncryptionSalt,
 } from "@/lib/auth"
 import { deriveKey, unwrapDek } from "@/lib/per-user-crypto"
-import { isEncryptionConfigured, importKeyFromHex, encryptWithKey, decryptWithKey } from "@/lib/crypto"
+import { isEncryptionConfigured, importKeyFromHex, encryptWithKey, decryptWithKey, encrypt } from "@/lib/crypto"
 import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit"
 import { db } from "@/lib/db"
 import { ENCRYPTED_FIELDS } from "@/lib/encryption-fields"
+
+const AUTO_BACKUP_KEY = "auto_backup"
 
 export async function POST(request: NextRequest) {
   const user = await getCurrentUser()
@@ -72,6 +74,9 @@ export async function POST(request: NextRequest) {
       // Delete all old sessions, create new one with new DEK
       await db.session.deleteMany({ where: { userId: user.id } })
       await createSession(user.id, newDekHex)
+
+      // Refresh auto-backup keys if enabled
+      await refreshAutoBackupKeys(body.newPassword, newDekHex)
     } else {
       // No per-user encryption — just update password
       await db.user.update({
@@ -170,4 +175,20 @@ async function updateRecordForModel(
     return
   }
   await delegate.update({ where: { id }, data })
+}
+
+async function refreshAutoBackupKeys(newPassword: string, newDekHex: string) {
+  try {
+    const setting = await db.settings.findUnique({ where: { key: AUTO_BACKUP_KEY } })
+    if (!setting) return
+    const config = setting.value as Record<string, unknown>
+    if (!config.enabled) return
+    config.wrappedDek = await encrypt(newDekHex)
+    const salt = Array.from(crypto.getRandomValues(new Uint8Array(32))).map((b) => b.toString(16).padStart(2, "0")).join("")
+    config.wrappedBackupKey = await encrypt(await deriveKey("pw-backup:" + newPassword, salt))
+    config.backupKeySalt = salt
+    await db.settings.update({ where: { key: AUTO_BACKUP_KEY }, data: { value: JSON.parse(JSON.stringify(config)) } })
+  } catch (err) {
+    console.error("[change-password] Failed to refresh auto-backup keys:", err)
+  }
 }

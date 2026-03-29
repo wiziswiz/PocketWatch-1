@@ -23,6 +23,7 @@ interface AutoBackupConfig {
   directory: string
   wrappedBackupKey: string | null
   backupKeySalt: string | null
+  wrappedDek: string | null
   lastBackupAt: string | null
   lastBackupError: string | null
 }
@@ -48,22 +49,34 @@ export async function POST(req: NextRequest) {
     // Unwrap the backup encryption key
     const backupKeyHex = await decrypt(config.wrappedBackupKey)
 
-    // Get DEK from the most recent active session for Layer 2 decryption
+    // Get DEK for Layer 2 decryption — prefer stored wrappedDek (works when locked)
     const user = await db.user.findFirst()
     if (!user) return apiError("B4003", "No user found", 500)
 
-    const session = await db.session.findFirst({
-      where: { userId: user.id, expiresAt: { gte: new Date() } },
-      orderBy: { createdAt: "desc" },
-    })
-
     let dekHex: string | null = null
-    if (session?.encryptedDek) {
-      dekHex = await decrypt(session.encryptedDek)
+
+    // Primary: use stored wrappedDek (works even when vault is locked)
+    if (config.wrappedDek) {
+      try {
+        dekHex = await decrypt(config.wrappedDek)
+      } catch {
+        // wrappedDek may be stale — fall through to session
+      }
+    }
+
+    // Fallback: try active session (backward compat for configs without wrappedDek)
+    if (!dekHex) {
+      const session = await db.session.findFirst({
+        where: { userId: user.id, expiresAt: { gte: new Date() } },
+        orderBy: { createdAt: "desc" },
+      })
+      if (session?.encryptedDek) {
+        dekHex = await decrypt(session.encryptedDek)
+      }
     }
 
     if (!dekHex) {
-      throw new Error("No active user session — cannot decrypt fields for backup. Please log in first.")
+      throw new Error("Cannot decrypt fields for backup — re-enable auto-backup in Settings")
     }
 
     // Export within encryption context
