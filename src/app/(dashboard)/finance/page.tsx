@@ -259,16 +259,13 @@ export default function FinanceDashboardPage() {
             <StaggerItem>
               {(deep?.budgetHealth?.length ?? 0) > 0 ? (
                 <FinanceStatCard
-                  label="Safe to Spend / Day"
+                  label={`Safe to Spend / Day${deep?.cashFlowForecast?.daysRemaining != null ? ` · ${deep.cashFlowForecast.daysRemaining}d left` : ""}`}
                   value={deep?.cashFlowForecast?.safeDailySpend != null
                     ? formatCurrency(deep.cashFlowForecast.safeDailySpend)
                     : "--"}
                   icon="savings"
                   accentColor="#3b82f6"
                   isHidden={isHidden}
-                  change={deep?.cashFlowForecast?.daysRemaining != null
-                    ? { value: `${deep.cashFlowForecast.daysRemaining}d left this month`, positive: true }
-                    : undefined}
                 />
               ) : (
                 <Link
