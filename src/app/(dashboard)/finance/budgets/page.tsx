@@ -145,14 +145,14 @@ export default function FinanceBudgetsPage() {
       </div>
 
       {/* ── Tab Bar ── */}
-      <div role="tablist" className="flex items-center gap-1 bg-background-secondary rounded-lg p-1 w-fit">
+      <div role="tablist" className="flex items-center gap-0.5 bg-background-secondary border border-card-border rounded-xl p-1 w-fit">
         <TabButton active={activeTab === "data-driven"} onClick={() => setActiveTab("data-driven")} icon="auto_graph">
           Data-Driven
         </TabButton>
         <TabButton active={activeTab === "my-budget"} onClick={() => setActiveTab("my-budget")} icon="tune">
           My Budget
           {hasBudgets && (
-            <span className="ml-1.5 text-[9px] font-bold bg-primary/15 text-primary px-1.5 py-0.5 rounded-full tabular-nums">
+            <span className={cn("ml-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full tabular-nums", activeTab === "my-budget" ? "bg-white/20 text-white" : "bg-primary/15 text-primary")}>
               {budgets!.length}
             </span>
           )}
@@ -200,7 +200,7 @@ export default function FinanceBudgetsPage() {
           <BudgetStatStrip dailyAvg={pace.dailyAvg} projectedTotal={pace.projectedTotal} totalBudgeted={summary.totalBudgeted} worstCategory={worstCategory} onTrackCount={summary.budgetCount - summary.overBudgetCount} totalCount={summary.budgetCount} />
 
           <FadeIn delay={0.1}>
-            <BudgetCategoryList categories={categoryData} txByCategory={txByCategory} onEditBudget={(id, limit) => updateBudget.mutate({ budgetId: id, monthlyLimit: limit })} onDeleteBudget={(id) => setDeletingId(id)} onAddBudget={() => setShowModal(true)} />
+            <BudgetCategoryList categories={categoryData} txByCategory={txByCategory} onEditBudget={(id, limit) => updateBudget.mutate({ budgetId: id, monthlyLimit: limit })} onToggleRollover={(id, rollover) => updateBudget.mutate({ budgetId: id, rollover })} onDeleteBudget={(id) => setDeletingId(id)} onAddBudget={() => setShowModal(true)} />
           </FadeIn>
 
           <FadeIn delay={0.15}>
@@ -232,13 +232,13 @@ function TabButton({ active, onClick, icon, children }: { active: boolean; onCli
       aria-selected={active}
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all",
+        "inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold transition-all",
         active
-          ? "bg-card text-foreground shadow-sm"
-          : "text-foreground-muted hover:text-foreground"
+          ? "bg-primary text-white shadow-sm"
+          : "text-foreground-muted hover:text-foreground hover:bg-foreground/5"
       )}
     >
-      <span className="material-symbols-rounded" style={{ fontSize: 14 }}>{icon}</span>
+      <span className="material-symbols-rounded" style={{ fontSize: 16 }}>{icon}</span>
       {children}
     </button>
   )

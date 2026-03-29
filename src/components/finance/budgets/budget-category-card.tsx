@@ -17,10 +17,11 @@ interface BudgetCategoryCardProps {
   onSaveEdit: (id: string, newLimit: number) => void
   onCancelEdit: () => void
   onDelete: (id: string) => void
+  onToggleRollover: (id: string, rollover: boolean) => void
   showSixMonthAvg: boolean
 }
 
-export function BudgetCategoryCard({ budget, transactions, isEditing, onStartEdit, onSaveEdit, onCancelEdit, onDelete, showSixMonthAvg }: BudgetCategoryCardProps) {
+export function BudgetCategoryCard({ budget, transactions, isEditing, onStartEdit, onSaveEdit, onCancelEdit, onDelete, onToggleRollover, showSixMonthAvg }: BudgetCategoryCardProps) {
   const meta = getCategoryMeta(budget.category)
   const isOver = budget.percentUsed > 100
   const isWarn = budget.percentUsed >= 80 && !isOver
@@ -78,7 +79,7 @@ export function BudgetCategoryCard({ budget, transactions, isEditing, onStartEdi
                 <span className="text-xs text-foreground-muted tabular-nums">
                   {formatCurrency(displaySpent, "USD", 0)} {displayLabel}
                   <span className="mx-0.5">/</span>
-                  <span className="cursor-pointer hover:text-foreground hover:underline decoration-dotted underline-offset-2 transition-colors" onDoubleClick={onStartEdit} title="Double-click to edit">
+                  <span className="cursor-pointer hover:text-foreground hover:underline decoration-dotted underline-offset-2 transition-colors" onClick={onStartEdit} title="Click to edit">
                     {formatCurrency(budget.monthlyLimit, "USD", 0)}
                   </span>
                 </span>
@@ -119,18 +120,21 @@ export function BudgetCategoryCard({ budget, transactions, isEditing, onStartEdi
               )}
             </div>
 
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1">
               {isEditing ? (
                 <>
                   {budget.sixMonthAvg !== null && <QuickChip label={`Avg ${formatCurrency(budget.sixMonthAvg, "USD", 0)}`} onClick={() => setEditValue(String(Math.round(budget.sixMonthAvg!)))} />}
                   <QuickChip label="+10%" onClick={() => setEditValue(String(Math.round(budget.monthlyLimit * 1.1)))} />
+                  <button onClick={() => onToggleRollover(budget.id, !budget.rollover)} className={cn("text-[9px] px-1.5 py-0.5 rounded-md font-medium transition-colors", budget.rollover ? "bg-success/15 text-success" : "bg-foreground/5 text-foreground-muted hover:text-foreground")} title="Carry unused budget to next month">
+                    Rollover {budget.rollover ? "on" : "off"}
+                  </button>
                 </>
               ) : (
                 <>
-                  <button onClick={onStartEdit} className="p-1 rounded-md hover:bg-foreground/5 transition-colors" aria-label={`Edit ${budget.category}`}>
+                  <button onClick={onStartEdit} className="p-1 rounded-md hover:bg-foreground/5 transition-colors" title="Edit limit" aria-label={`Edit ${budget.category}`}>
                     <span className="material-symbols-rounded text-foreground-muted" style={{ fontSize: 15 }}>edit</span>
                   </button>
-                  <button onClick={() => onDelete(budget.id)} className="p-1 rounded-md hover:bg-error/10 transition-colors" aria-label={`Delete ${budget.category}`}>
+                  <button onClick={() => onDelete(budget.id)} className="p-1 rounded-md hover:bg-error/10 transition-colors" title="Delete budget" aria-label={`Delete ${budget.category}`}>
                     <span className="material-symbols-rounded text-foreground-muted hover:text-error" style={{ fontSize: 15 }}>delete</span>
                   </button>
                 </>

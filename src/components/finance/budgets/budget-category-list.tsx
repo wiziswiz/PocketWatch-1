@@ -14,11 +14,12 @@ interface BudgetCategoryListProps {
   categories: BudgetCategoryData[]
   txByCategory?: Record<string, TxEntry[]>
   onEditBudget: (id: string, limit: number) => void
+  onToggleRollover: (id: string, rollover: boolean) => void
   onDeleteBudget: (id: string) => void
   onAddBudget: () => void
 }
 
-export function BudgetCategoryList({ categories, txByCategory, onEditBudget, onDeleteBudget, onAddBudget }: BudgetCategoryListProps) {
+export function BudgetCategoryList({ categories, txByCategory, onEditBudget, onToggleRollover, onDeleteBudget, onAddBudget }: BudgetCategoryListProps) {
   const [viewMode, setViewMode] = useState<"this" | "avg">("this")
   const [sortBy, setSortBy] = useState<SortMode>("status")
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -53,6 +54,7 @@ export function BudgetCategoryList({ categories, txByCategory, onEditBudget, onD
               onSaveEdit={(id, limit) => { onEditBudget(id, limit); setEditingId(null) }}
               onCancelEdit={() => setEditingId(null)}
               onDelete={onDeleteBudget}
+              onToggleRollover={onToggleRollover}
               showSixMonthAvg={viewMode === "avg"}
             />
           </StaggerItem>
