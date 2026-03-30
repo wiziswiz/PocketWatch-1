@@ -49,7 +49,7 @@ export function BudgetSubscriptionsImpact({ subscriptions, monthlyTotal, totalBu
             const barWidth = maxAmount > 0 ? (sub.amount / maxAmount) * 100 : 0
             const catMeta = sub.category ? getCategoryMeta(sub.category) : null
             return (
-              <div key={sub.merchantName} className="group">
+              <div key={`${sub.merchantName}-${sub.amount}`} className="group">
                 <div className="flex items-center justify-between gap-3 mb-0.5">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 bg-foreground/5 text-[8px] font-bold text-foreground-muted overflow-hidden">
