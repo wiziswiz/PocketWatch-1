@@ -87,7 +87,7 @@ export interface BillItem {
   nextDueDate: string
   daysUntil: number
   category: string | null
-  billType: BillType | "cc_payment"
+  billType: BillType
   isPaid?: boolean
   lastTransactionId?: string | null
   logoUrl?: string | null

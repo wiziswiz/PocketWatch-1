@@ -143,18 +143,25 @@ export async function getCCBills(userId: string, targetMonth: string, now: Date)
   const bills: BillItem[] = []
   const source1AccountIds = new Set<string>()
 
-  // Source 1: Plaid liability data (has explicit nextPaymentDueDate)
-  const liabilities = await db.financeLiabilityCreditCard.findMany({
-    where: { userId, nextPaymentDueDate: { not: null } },
-    include: {
-      account: {
-        select: { id: true, name: true, mask: true, institution: { select: { institutionName: true } } },
+  // Source 1: Plaid liability data — fetch ALL to build exclusion set, then filter for bills
+  const [liabilities, allLiabilityAccountIds] = await Promise.all([
+    db.financeLiabilityCreditCard.findMany({
+      where: { userId, nextPaymentDueDate: { not: null } },
+      include: {
+        account: {
+          select: { id: true, name: true, mask: true, institution: { select: { institutionName: true } } },
+        },
       },
-    },
-  })
+    }),
+    // Track ALL Plaid-linked accounts (even those without due dates) so Source 2
+    // only picks up cards with zero Plaid data
+    db.financeLiabilityCreditCard.findMany({
+      where: { userId },
+      select: { accountId: true },
+    }).then((rows) => rows.map((r) => r.accountId)),
+  ])
 
-  // Track ALL Plaid-linked accounts so Source 2 only picks up non-Plaid cards
-  for (const cc of liabilities) source1AccountIds.add(cc.accountId)
+  for (const id of allLiabilityAccountIds) source1AccountIds.add(id)
 
   for (const cc of liabilities) {
     if (!cc.nextPaymentDueDate) continue
