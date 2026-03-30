@@ -3,7 +3,7 @@
  * Subscriptions vs CC annual fees vs insurance vs memberships vs generic bills.
  */
 
-export type BillType = "subscription" | "cc_annual_fee" | "insurance" | "membership" | "bill"
+export type BillType = "subscription" | "cc_annual_fee" | "cc_payment" | "insurance" | "membership" | "bill"
 
 /** Known subscription service names (partial match) */
 const SUBSCRIPTION_SERVICES = [
@@ -118,7 +118,20 @@ export function classifyBillType(input: ClassifyInput): { billType: BillType; re
     return { billType: "subscription", reason: `Category "${input.category}" + ${input.frequency} frequency` }
   }
 
-  // 5. Bill — everything else
+  // 5. CC Payment — bank debits that pay a credit card (e.g. "CHASE CREDIT CRD DES:EPAY")
+  const CC_PAYMENT_PATTERNS = [
+    "CREDIT CRD",          // Chase: "CHASE CREDIT CRD DES:EPAY"
+    "CARD ONLINE DES:PAY", // Citi: "CITI CARD ONLINE DES:PAYMENT"
+    "CREDIT CARD PAYMENT",
+    "CC PAYMENT",
+  ] as const
+  for (const pattern of CC_PAYMENT_PATTERNS) {
+    if (upper.includes(pattern)) {
+      return { billType: "cc_payment", reason: `Matched CC payment pattern: "${pattern}"` }
+    }
+  }
+
+  // 6. Bill — everything else
   return { billType: "bill", reason: "Default classification (no specific pattern matched)" }
 }
 

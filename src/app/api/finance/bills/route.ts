@@ -67,7 +67,8 @@ export async function GET(req: NextRequest) {
       const name = (ps.merchantName ?? ps.description).toLowerCase()
       if (dismissedNames.has(name) || materializedMerchants.has(name)) continue
       const bill = projectPlaidBill(ps, accountMap, targetMonth, monthEnd, now)
-      if (bill) subBills.push(bill)
+      // Skip cc_payment streams — getCCBills() handles credit card bills from the liability side
+      if (bill && bill.billType !== "cc_payment") subBills.push(bill)
     }
 
     const ccBills = await getCCBills(user.id, targetMonth, now)
