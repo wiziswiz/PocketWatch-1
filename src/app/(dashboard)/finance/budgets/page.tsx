@@ -82,7 +82,16 @@ export default function FinanceBudgetsPage() {
   }, [categoryData])
 
   const activeSubs = useMemo(
-    () => (subsData?.subscriptions ?? []).filter((s) => s.status === "active").slice(0, 6).map((s) => ({ merchantName: s.merchantName, amount: s.amount, logoUrl: s.logoUrl ?? null, category: s.category ?? null })),
+    () => (subsData?.subscriptions ?? [])
+      .filter((s) => s.status === "active" && s.billType !== "bill")
+      .slice(0, 6)
+      .map((s) => ({ merchantName: s.merchantName, amount: s.amount, logoUrl: s.logoUrl ?? null, category: s.category ?? null })),
+    [subsData],
+  )
+  const subsMonthlyTotal = useMemo(
+    () => (subsData?.subscriptions ?? [])
+      .filter((s) => s.status === "active" && s.billType !== "bill")
+      .reduce((sum, s) => sum + s.amount, 0),
     [subsData],
   )
 
@@ -205,7 +214,7 @@ export default function FinanceBudgetsPage() {
 
           <FadeIn delay={0.15}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <BudgetSubscriptionsImpact subscriptions={activeSubs} monthlyTotal={subsData?.monthlyTotal ?? 0} totalBudgeted={summary.totalBudgeted} />
+              <BudgetSubscriptionsImpact subscriptions={activeSubs} monthlyTotal={subsMonthlyTotal} totalBudgeted={summary.totalBudgeted} />
               <BudgetInlineInsights insights={insights} isGenerating={generateAI.isPending} onGenerate={() => generateAI.mutate(undefined, { onSuccess: () => toast.success("AI analysis generated"), onError: (e) => toast.error(e.message) })} />
             </div>
           </FadeIn>
