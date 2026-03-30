@@ -40,11 +40,12 @@ export function PatternReviewFlow() {
     if (currentIndex < transactions.length - 1) {
       setCurrentIndex((i) => i + 1)
     } else {
-      // React Query auto-refetches when offset in the query key changes
-      setOffset((o) => o + 20)
+      // Refetch from the start — reviewed items are removed server-side so offset 0 always works
+      setOffset(0)
       setCurrentIndex(0)
+      refetch()
     }
-  }, [currentIndex, transactions.length])
+  }, [currentIndex, transactions.length, refetch])
 
   const handleAccept = useCallback((nickname?: string) => {
     if (!currentTx) return
