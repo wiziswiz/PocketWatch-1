@@ -1,16 +1,15 @@
 /**
  * POST /api/backup/browse-dirs
- * Two modes:
- *   1. { action: "resolve", marker: "<uuid>" } — find a .pwmarker file on disk to resolve the native picker's selected path
- *   2. { action: "validate", path: "~/..." } — validate/create a directory path
+ * Opens the native macOS folder picker via osascript and returns the selected path.
+ * Also supports direct path validation via { action: "validate", path: "~/..." }.
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { resolve, sep, dirname } from "node:path"
+import { resolve, sep } from "node:path"
 import { homedir } from "node:os"
 import { execFile } from "node:child_process"
 import { promisify } from "node:util"
-import { mkdir, lstat, unlink } from "node:fs/promises"
+import { mkdir, lstat } from "node:fs/promises"
 import { getCurrentUser } from "@/lib/auth"
 import { apiError } from "@/lib/api-error"
 
@@ -20,7 +19,7 @@ function toDisplay(absPath: string, home: string): string {
   return absPath.startsWith(home) ? "~" + absPath.slice(home.length) : absPath
 }
 
-function checkHome(absPath: string, home: string): boolean {
+function isWithinHome(absPath: string, home: string): boolean {
   return absPath.startsWith(home + sep) || absPath === home
 }
 
@@ -28,33 +27,55 @@ export async function POST(req: NextRequest) {
   const user = await getCurrentUser()
   if (!user) return apiError("B5001", "Authentication required", 401)
 
-  let body: { action?: string; marker?: string; path?: string; create?: boolean }
+  let body: { action?: string; path?: string; create?: boolean; defaultPath?: string }
   try { body = await req.json() } catch { return apiError("B5003", "Invalid request body", 400) }
 
   const home = homedir()
 
-  // Mode 1: Find marker file to resolve native picker path
-  if (body.action === "resolve" && typeof body.marker === "string") {
-    const markerName = `.pwmarker-${body.marker}`
+  // Mode 1: Open native folder picker
+  if (body.action === "pick") {
+    const defaultDir = (body.defaultPath ?? "~").replace(/^~/, home)
+    const resolvedDefault = resolve(defaultDir)
+
     try {
-      const { stdout } = await execFileAsync("find", [home, "-name", markerName, "-maxdepth", "10", "-print", "-quit"], { timeout: 10_000 })
-      const markerPath = stdout.trim()
-      if (markerPath) {
-        await unlink(markerPath).catch(() => {})
-        const folderPath = dirname(markerPath)
-        if (!checkHome(folderPath, home)) return apiError("B5002", "Path must be within home directory", 403)
-        return NextResponse.json({ path: toDisplay(folderPath, home) })
+      const script = [
+        `set defaultFolder to POSIX file "${resolvedDefault}"`,
+        `try`,
+        `  set theFolder to POSIX path of (choose folder with prompt "Select backup folder" default location defaultFolder)`,
+        `on error`,
+        `  set theFolder to POSIX path of (choose folder with prompt "Select backup folder")`,
+        `end try`,
+        `return theFolder`,
+      ].join("\n")
+
+      const { stdout } = await execFileAsync("osascript", ["-e", script], { timeout: 120_000 })
+      const selected = stdout.trim().replace(/\/$/, "")
+
+      if (!selected) return NextResponse.json({ cancelled: true })
+
+      const resolvedSelected = resolve(selected)
+      if (!isWithinHome(resolvedSelected, home)) {
+        return apiError("B5002", "Selected folder must be within your home directory", 403)
       }
-    } catch {}
-    return apiError("B5004", "Could not resolve selected folder.", 404)
+
+      return NextResponse.json({ path: toDisplay(resolvedSelected, home), cancelled: false })
+    } catch (err: unknown) {
+      // osascript exit code 1 = user cancelled
+      if ((err as { code?: number }).code === 1) {
+        return NextResponse.json({ cancelled: true })
+      }
+      // If osascript itself fails (e.g. no GUI), return a helpful error
+      const msg = (err as Error).message ?? ""
+      return apiError("B5005", msg.includes("execution error") ? "Folder picker was cancelled" : "Failed to open folder picker", 500)
+    }
   }
 
-  // Mode 2: Validate / create path
+  // Mode 2: Validate / create path directly
   const rawPath = typeof body.path === "string" ? body.path : "~"
   const expanded = rawPath.replace(/^~/, home)
   const resolvedDir = resolve(expanded)
 
-  if (!checkHome(resolvedDir, home)) return apiError("B5002", "Path must be within home directory", 403)
+  if (!isWithinHome(resolvedDir, home)) return apiError("B5002", "Path must be within home directory", 403)
 
   if (body.create) {
     try {
@@ -69,4 +90,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ path: toDisplay(resolvedDir, home), exists })
 }
-

@@ -35,38 +35,24 @@ export function BackupScheduleCard() {
     if (isBrowsing) return
     setIsBrowsing(true)
     try {
-      // Open native OS folder picker via File System Access API
-      const handle = await (window as any).showDirectoryPicker({ mode: "readwrite" })
-
-      // Write a temporary marker file so the server can find the absolute path
-      const marker = crypto.randomUUID()
-      const markerFile = await handle.getFileHandle(`.pwmarker-${marker}`, { create: true })
-      const writable = await markerFile.createWritable()
-      await writable.write("marker")
-      await writable.close()
-
-      // Ask server to find the marker and resolve the path
       const res = await fetch("/api/backup/browse-dirs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "resolve", marker }),
+        body: JSON.stringify({ action: "pick", defaultPath: schedule?.directory ?? "~" }),
       })
-
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        toast.error(data.message ?? "Could not resolve folder path")
+        toast.error(data.message ?? "Failed to open folder picker")
         return
       }
-
       const data = await res.json()
+      if (data.cancelled) return
       updateSchedule.mutate({ directory: data.path }, {
         onSuccess: () => toast.success(`Backup directory set to ${data.path}`),
         onError: (err) => toast.error(err.message),
       })
-    } catch (err: unknown) {
-      // User cancelled the picker — AbortError is expected
-      if (err instanceof DOMException && err.name === "AbortError") return
-      toast.error("Failed to select folder")
+    } catch {
+      toast.error("Failed to open folder picker")
     } finally {
       setIsBrowsing(false)
     }
