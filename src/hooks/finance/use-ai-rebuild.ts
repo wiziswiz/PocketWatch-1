@@ -99,11 +99,7 @@ function loadFromStorage(): AIRebuildState | null {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
     const saved = JSON.parse(raw)
-    // Expire after 30 minutes
-    if (Date.now() - (saved.savedAt ?? 0) > 30 * 60 * 1000) {
-      localStorage.removeItem(STORAGE_KEY)
-      return null
-    }
+    // localStorage serves as fast cache; DB is the source of truth
     return {
       status: saved.status,
       preview: saved.preview,

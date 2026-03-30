@@ -4,7 +4,6 @@ import { db } from "@/lib/db"
 import { decryptCredential } from "@/lib/finance/crypto"
 import { runRebuildBatches, fetchMerchantsForRebuild, fetchMerchantsByNames } from "@/lib/finance/ai-rebuild-engine"
 import { callAIProviderRaw, getProviderLabel, type AIProviderType } from "@/lib/finance/ai-providers"
-import { setCache, getCached } from "@/lib/cache"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod/v4"
 
@@ -102,7 +101,12 @@ export async function POST(req: NextRequest): Promise<Response> {
           cancelSignal
         )
 
-        setCache(`ai-rebuild:${user.id}`, summary, 30 * 60 * 1000)
+        // Persist to DB so results survive server restarts and are always viewable
+        await db.settings.upsert({
+          where: { key: `ai-rebuild-summary:${user.id}` },
+          update: { value: summary as object },
+          create: { key: `ai-rebuild-summary:${user.id}`, value: summary as object },
+        })
       } catch (err) {
         send("error", { message: err instanceof Error ? err.message : "Rebuild failed" })
       } finally {
@@ -140,6 +144,8 @@ export async function GET() {
   const user = await getCurrentUser()
   if (!user) return apiError("F9320", "Authentication required", 401)
 
-  const cached = getCached<unknown>(`ai-rebuild:${user.id}`)
-  return NextResponse.json({ summary: cached ?? null })
+  const record = await db.settings.findUnique({
+    where: { key: `ai-rebuild-summary:${user.id}` },
+  })
+  return NextResponse.json({ summary: record?.value ?? null })
 }
