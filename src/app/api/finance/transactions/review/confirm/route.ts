@@ -75,14 +75,14 @@ export async function POST(req: NextRequest) {
               },
             })
 
-            // If rule crossed AUTO_APPLY threshold, clear review on all matching txns
-            if (newConf >= CONFIDENCE.AUTO_APPLY && rule.confidence < CONFIDENCE.AUTO_APPLY) {
+            // Propagate to all matching pending-review txns when rule is high-confidence
+            if (newConf >= CONFIDENCE.AUTO_APPLY) {
               await prisma.financeTransaction.updateMany({
                 where: {
-                  userId: user.id, needsReview: true, category: tx.category,
-                  name: { contains: cleaned, mode: "insensitive" },
+                  userId: user.id, needsReview: true,
+                  merchantName: { contains: cleaned, mode: "insensitive" },
                 },
-                data: { needsReview: false },
+                data: { category: tx.category!, needsReview: false },
               })
             }
           } else if (nickname) {
@@ -150,6 +150,15 @@ export async function POST(req: NextRequest) {
               data: { userId: user.id, matchType: "contains", matchValue: cleaned, category, subcategory: subcategory ?? null, nickname: nickname ?? null, priority: 10, confidence: CONFIDENCE.INITIAL_USER, source: "user" },
             })
           }
+
+          // Propagate new category to all matching pending-review txns from this merchant
+          await prisma.financeTransaction.updateMany({
+            where: {
+              userId: user.id, needsReview: true,
+              merchantName: { contains: cleaned, mode: "insensitive" },
+            },
+            data: { category, subcategory: subcategory ?? null, needsReview: false },
+          })
         }
       }
     })
