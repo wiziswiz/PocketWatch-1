@@ -10,12 +10,13 @@ interface ErrorInstitution {
   id: string
   institutionName: string
   institutionLogo: string | null
+  provider: string
   status: string
   errorMessage: string | null
 }
 
 export function ReconnectBanner({ institutions }: { institutions: ErrorInstitution[] }) {
-  const errored = institutions.filter((i) => i.status === "error")
+  const errored = institutions.filter((i) => i.status === "error" && i.provider !== "manual")
   if (errored.length === 0) return null
 
   return (
