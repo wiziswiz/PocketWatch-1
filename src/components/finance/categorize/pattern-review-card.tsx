@@ -45,8 +45,8 @@ export function PatternReviewCard({ transaction: tx, onAccept, onChange, onSkip,
           )}
           <div className="flex-1 min-w-0">
             <p className="text-base font-semibold text-foreground truncate">{tx.cleanedName}</p>
-            {tx.merchantName && tx.merchantName !== tx.cleanedName && (
-              <p className="text-xs text-foreground-muted truncate">{tx.name}</p>
+            {tx.name && tx.name !== tx.cleanedName && (
+              <p className="text-xs text-foreground-muted">{tx.name}</p>
             )}
             <div className="flex items-center gap-3 mt-1.5">
               <span className="text-sm font-medium tabular-nums text-foreground">
