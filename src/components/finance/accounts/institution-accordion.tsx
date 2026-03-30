@@ -78,7 +78,7 @@ export function InstitutionAccordion({
         <div className="flex-1 min-w-0 text-left">
           <div className="flex items-center gap-2">
             {inst.provider === "manual" && onRenameInstitution ? (
-              <div onClick={(e) => e.stopPropagation()}>
+              <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                 <EditableName
                   value={inst.institutionName}
                   onSave={(newName) => onRenameInstitution(inst.id, newName)}
