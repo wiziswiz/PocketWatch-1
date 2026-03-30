@@ -55,7 +55,7 @@ export function useUpdateAccount() {
   return useMutation({
     mutationFn: (data: { accountId: string; name?: string; isHidden?: boolean; type?: string; institutionName?: string }) =>
       financeFetch("/accounts", { method: "PATCH", body: JSON.stringify(data) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: financeKeys.accounts() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: financeKeys.all }),
   })
 }
 
