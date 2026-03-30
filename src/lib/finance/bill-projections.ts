@@ -214,24 +214,33 @@ export async function getCCBills(userId: string, targetMonth: string, now: Date)
       })
     : []
 
-  // FIX Bug 11: Use getUTCDate() for dates from @db.Date (UTC midnight)
-  const needDetection = profileAccountIds.filter((id) => !dueDayMap.get(id))
-  if (needDetection.length > 0) {
+  // Detect due days AND estimate statement balances from payment history
+  const paymentAmountMap = new Map<string, number>() // accountId → estimated statement balance
+  if (profileAccountIds.length > 0) {
     const recentPayments = await db.financeTransaction.findMany({
       where: {
         userId,
-        accountId: { in: needDetection },
-        amount: { lt: 0 },
+        accountId: { in: profileAccountIds },
+        amount: { lt: 0 }, // Negative = payment to credit card
       },
-      select: { accountId: true, date: true },
+      select: { accountId: true, date: true, amount: true },
       orderBy: { date: "desc" },
-      // FIX Bug 9 (audit): increase limit for better multi-card detection
-      take: needDetection.length * 10,
+      take: profileAccountIds.length * 6, // ~3 payments per card
     })
     for (const tx of recentPayments) {
-      if (tx.accountId && !dueDayMap.get(tx.accountId)) {
-        // FIX Bug 11: Use UTC date to avoid timezone shift
+      if (!tx.accountId) continue
+      // Detect due day from first (most recent) payment per card
+      if (!dueDayMap.get(tx.accountId)) {
         dueDayMap.set(tx.accountId, new Date(tx.date).getUTCDate())
+      }
+      // Average last 2-3 payment amounts as estimated statement balance
+      const prev = paymentAmountMap.get(tx.accountId)
+      if (!prev) {
+        paymentAmountMap.set(tx.accountId, Math.abs(tx.amount))
+      } else if (!paymentAmountMap.has(`${tx.accountId}:done`)) {
+        // Average of first two payments
+        paymentAmountMap.set(tx.accountId, Math.round(((prev + Math.abs(tx.amount)) / 2) * 100) / 100)
+        paymentAmountMap.set(`${tx.accountId}:done`, 1)
       }
     }
   }
@@ -239,7 +248,10 @@ export async function getCCBills(userId: string, targetMonth: string, now: Date)
   const [targetYear, targetMon] = targetMonth.split("-").map(Number)
   for (const acct of creditAccounts) {
     const balance = Math.abs(acct.currentBalance ?? 0)
-    if (balance <= 0) continue
+    // Use estimated statement balance from payment history when available
+    const estimatedStatement = paymentAmountMap.get(acct.id)
+    const billAmount = estimatedStatement ?? balance
+    if (billAmount <= 0 && balance <= 0) continue
     const rawDueDay = dueDayMap.get(acct.id) ?? 25
     const lastDayOfMonth = new Date(targetYear, targetMon, 0).getDate()
     const dueDay = Math.min(rawDueDay, lastDayOfMonth)
@@ -256,7 +268,7 @@ export async function getCCBills(userId: string, targetMonth: string, now: Date)
     bills.push({
       id: `cc-sfin-${acct.id}`,
       merchantName: `${displayName}${maskSuffix}`,
-      amount: balance,
+      amount: billAmount > 0 ? billAmount : balance,
       frequency: "monthly",
       nextDueDate: `${targetYear}-${String(targetMon).padStart(2, "0")}-${String(dueDay).padStart(2, "0")}`,
       daysUntil: isPaid ? -1 : Math.max(0, daysUntil),

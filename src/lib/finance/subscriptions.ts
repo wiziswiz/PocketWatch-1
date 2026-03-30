@@ -117,7 +117,7 @@ function clusterByAmount<T extends { amount: number }>(items: T[]): T[][] {
     const clusterRef = lastCluster[0].amount
     const inCluster = clusterRef === 0
       ? sorted[i].amount === 0
-      : Math.abs(sorted[i].amount - clusterRef) / clusterRef <= 0.15
+      : Math.abs(sorted[i].amount - clusterRef) / clusterRef <= 0.25
     if (inCluster) {
       lastCluster.push(sorted[i])
     } else {
@@ -162,10 +162,9 @@ function analyzeCluster(
   const frequency = classifyFrequency(avgInterval)
   if (!frequency) return null
 
-  // For 2-charge detection: allow monthly+ with lower confidence.
-  // SimpleFIN returns only 90 days of data, so monthly subs often have exactly 2 charges.
+  // For 2-charge detection: allow biweekly+ with lower confidence.
+  // SimpleFIN returns only 90 days of data, so many subs have exactly 2-3 charges.
   if (charges.length === 2 && frequency === "weekly") return null
-  if (charges.length === 2 && frequency === "biweekly") return null
 
   let confidence: number
 
@@ -241,7 +240,12 @@ export function detectSubscriptions(
 
     let groupKey: string | null = null
     for (const key of groups.keys()) {
-      if (stringSimilarity(key, cleaned) > 0.8) {
+      // Match on similarity OR prefix match (catches "Netflix" vs "NETFLIX.COM INC")
+      const sim = stringSimilarity(key, cleaned)
+      const shorter = key.length < cleaned.length ? key : cleaned
+      const longer = key.length >= cleaned.length ? key : cleaned
+      const prefixMatch = longer.toUpperCase().startsWith(shorter.toUpperCase()) && shorter.length >= 4
+      if (sim > 0.75 || prefixMatch) {
         groupKey = key
         break
       }
