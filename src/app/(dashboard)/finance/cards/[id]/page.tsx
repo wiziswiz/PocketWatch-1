@@ -223,6 +223,7 @@ export default function CardDetailPage({
         card={card} issuer={issuer} mask={mask} balance={balance}
         rewardsValue={rewardsValue} rewardsLabel={rewardsLabel}
         creditLimit={creditLimit} aiData={aiData} onEditClick={() => setEditOpen(true)}
+        displayName={account?.name ?? card.cardName}
       />
 
       {autoEnrich.isPending && !aiData && <CardAILoadingSkeleton />}

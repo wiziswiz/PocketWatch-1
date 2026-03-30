@@ -13,6 +13,7 @@ export function CardDetailHero({
   creditLimit,
   aiData,
   onEditClick,
+  displayName,
 }: {
   card: { cardName: string; cardNetwork: string; cardImageUrl?: string | null; rewardProgram?: string | null; rewardType: string; annualFee?: number | null; baseRewardRate: number; annualFeeDate?: string | null }
   issuer: string
@@ -23,6 +24,7 @@ export function CardDetailHero({
   creditLimit: number
   aiData: CardAIEnrichedData | null
   onEditClick: () => void
+  displayName?: string
 }) {
   return (
     <div className="flex flex-col lg:flex-row gap-8 items-start">
@@ -44,7 +46,7 @@ export function CardDetailHero({
       <div className="w-full lg:w-1/2 flex flex-col gap-5">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">{card.cardName}</h1>
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">{displayName ?? card.cardName}</h1>
             <p className="text-primary text-sm font-medium mt-1">
               {card.rewardProgram ?? `${card.rewardType.charAt(0).toUpperCase()}${card.rewardType.slice(1)} Card`}
             </p>
