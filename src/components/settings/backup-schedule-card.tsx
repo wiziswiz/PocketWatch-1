@@ -27,7 +27,7 @@ export function BackupScheduleCard() {
     }
     if (!password) { toast.error("Password required"); return }
     updateSchedule.mutate({ enabled: true, password }, {
-      onSuccess: () => { toast.success("Auto-backup enabled"); setShowPasswordInput(false); setPassword("") },
+      onSuccess: () => { toast.success("Auto-backup enabled — creating first backup..."); setShowPasswordInput(false); setPassword("") },
       onError: (err) => toast.error(err.message),
     })
   }
@@ -69,7 +69,7 @@ export function BackupScheduleCard() {
           <p className="text-xs text-foreground-muted mt-0.5">
             {schedule.enabled
               ? `Running ${schedule.frequency} — keeping ${schedule.retentionCount} backups`
-              : "Schedule automatic encrypted backups"}
+              : "Automatic encrypted backups to keep your data safe"}
           </p>
         </div>
         <button
@@ -94,7 +94,7 @@ export function BackupScheduleCard() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleToggle()}
-            placeholder="Vault password to enable"
+            placeholder="Enter vault password to encrypt backups"
             className="flex-1 px-3 py-2 text-sm bg-background border border-card-border rounded-lg focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none"
           />
           <button onClick={handleToggle} disabled={!password} className="px-3 py-2 text-xs font-medium bg-primary text-white rounded-lg disabled:opacity-50">

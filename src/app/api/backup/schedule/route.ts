@@ -132,6 +132,18 @@ export async function POST(req: NextRequest) {
     update: { value: JSON.parse(JSON.stringify(config)) },
   })
 
+  // Trigger immediate first backup when enabling
+  if (body.enabled === true) {
+    const workerSecret = process.env.BACKUP_CRON_SECRET ?? process.env.SNAPSHOT_WORKER_SECRET
+    if (workerSecret) {
+      const baseUrl = process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+      fetch(`${baseUrl}/api/internal/backup-worker`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${workerSecret}` },
+      }).catch(() => {})
+    }
+  }
+
   return NextResponse.json({
     enabled: config.enabled,
     frequency: config.frequency,
