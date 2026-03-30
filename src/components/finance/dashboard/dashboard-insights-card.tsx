@@ -105,7 +105,7 @@ export function DashboardInsightsCard() {
   }, [aiData])
 
   return (
-    <div className="bg-card rounded-xl overflow-hidden" style={{ boxShadow: "var(--shadow-sm)" }}>
+    <div className="bg-card rounded-xl overflow-hidden flex flex-col" style={{ boxShadow: "var(--shadow-sm)" }}>
       {/* Header — title + filter tabs + refresh all on one line */}
       <div className="flex items-center gap-2 px-5 py-3 border-b border-card-border/30">
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -154,7 +154,7 @@ export function DashboardInsightsCard() {
       </div>
 
       {aiData?.insights ? (
-        <div className="max-h-[380px] overflow-y-auto">
+        <div className="flex-1 overflow-y-auto">
           <div className="divide-y divide-card-border/30">
             {items.map((item) => (
               <div key={item.key}>{item.node}</div>
