@@ -11,6 +11,7 @@ const bodySchema = z.object({
   action: z.enum(["accept", "change", "skip"]),
   category: z.string().optional(),
   subcategory: z.string().optional(),
+  nickname: z.string().max(100).optional(),
 })
 
 /**
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
     return apiError("F9201", parsed.error.issues[0]?.message ?? "Invalid request", 400)
   }
 
-  const { transactionId, action, category, subcategory } = parsed.data
+  const { transactionId, action, category, subcategory, nickname } = parsed.data
 
   try {
     const tx = await db.financeTransaction.findFirst({
@@ -66,7 +67,12 @@ export async function POST(req: NextRequest) {
             newConf = computeNewConfidence(rule.confidence, "confirmed")
             await prisma.financeCategoryRule.update({
               where: { id: rule.id },
-              data: { confidence: newConf, timesConfirmed: { increment: 1 }, lastUsedAt: new Date() },
+              data: {
+                confidence: newConf,
+                timesConfirmed: { increment: 1 },
+                lastUsedAt: new Date(),
+                ...(nickname ? { nickname } : {}),
+              },
             })
 
             // If rule crossed AUTO_APPLY threshold, clear review on all matching txns
@@ -79,6 +85,11 @@ export async function POST(req: NextRequest) {
                 data: { needsReview: false },
               })
             }
+          } else if (nickname) {
+            // No rule yet but user set a nickname — create one
+            await prisma.financeCategoryRule.create({
+              data: { userId: user.id, matchType: "contains", matchValue: cleaned, category: tx.category!, subcategory: tx.subcategory, nickname, priority: 10, confidence: CONFIDENCE.INITIAL_USER, source: "user" },
+            })
           }
         }
       })
@@ -132,11 +143,11 @@ export async function POST(req: NextRequest) {
           if (existing) {
             await prisma.financeCategoryRule.update({
               where: { id: existing.id },
-              data: { category, subcategory: subcategory ?? null, confidence: CONFIDENCE.INITIAL_USER, source: "user", lastUsedAt: new Date() },
+              data: { category, subcategory: subcategory ?? null, confidence: CONFIDENCE.INITIAL_USER, source: "user", lastUsedAt: new Date(), ...(nickname ? { nickname } : {}) },
             })
           } else {
             await prisma.financeCategoryRule.create({
-              data: { userId: user.id, matchType: "contains", matchValue: cleaned, category, subcategory: subcategory ?? null, priority: 10, confidence: CONFIDENCE.INITIAL_USER, source: "user" },
+              data: { userId: user.id, matchType: "contains", matchValue: cleaned, category, subcategory: subcategory ?? null, nickname: nickname ?? null, priority: 10, confidence: CONFIDENCE.INITIAL_USER, source: "user" },
             })
           }
         }

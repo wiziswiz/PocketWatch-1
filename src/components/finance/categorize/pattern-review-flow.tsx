@@ -46,26 +46,30 @@ export function PatternReviewFlow() {
     }
   }, [currentIndex, transactions.length])
 
-  const handleAccept = useCallback(() => {
+  const handleAccept = useCallback((nickname?: string) => {
     if (!currentTx) return
     confirmReview.mutate(
-      { transactionId: currentTx.id, action: "accept" },
+      { transactionId: currentTx.id, action: "accept", nickname },
       {
-        onSuccess: () => { setReviewedCount((c) => c + 1); advance() },
+        onSuccess: () => {
+          setReviewedCount((c) => c + 1)
+          advance()
+          if (nickname) toast.success(`Nicknamed "${currentTx.cleanedName}" → ${nickname}`)
+        },
         onError: (err) => toast.error(err.message),
       }
     )
   }, [currentTx, confirmReview, advance])
 
-  const handleChange = useCallback((category: string, subcategory?: string) => {
+  const handleChange = useCallback((category: string, subcategory?: string, nickname?: string) => {
     if (!currentTx) return
     confirmReview.mutate(
-      { transactionId: currentTx.id, action: "change", category, subcategory },
+      { transactionId: currentTx.id, action: "change", category, subcategory, nickname },
       {
         onSuccess: () => {
           setReviewedCount((c) => c + 1)
           advance()
-          toast.success(`Rule updated — future "${currentTx.cleanedName}" → ${category}`)
+          toast.success(`Rule updated — future "${currentTx.cleanedName}" → ${category}${nickname ? ` (${nickname})` : ""}`)
         },
         onError: (err) => toast.error(err.message),
       }

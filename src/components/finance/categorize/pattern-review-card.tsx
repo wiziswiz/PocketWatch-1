@@ -9,14 +9,15 @@ import type { ReviewTransaction } from "@/hooks/finance/use-review"
 
 interface PatternReviewCardProps {
   transaction: ReviewTransaction
-  onAccept: () => void
-  onChange: (category: string, subcategory?: string) => void
+  onAccept: (nickname?: string) => void
+  onChange: (category: string, subcategory?: string, nickname?: string) => void
   onSkip: () => void
   isSubmitting: boolean
 }
 
 export function PatternReviewCard({ transaction: tx, onAccept, onChange, onSkip, isSubmitting }: PatternReviewCardProps) {
   const [showPicker, setShowPicker] = useState(false)
+  const [nickname, setNickname] = useState("")
   const currentMeta = getCategoryMeta(tx.currentCategory)
   const topSuggestion = tx.suggestedCategories[0]
 
@@ -63,6 +64,18 @@ export function PatternReviewCard({ transaction: tx, onAccept, onChange, onSkip,
           </div>
         </div>
 
+        {/* Nickname input */}
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-rounded text-foreground-muted" style={{ fontSize: 16 }}>label</span>
+          <input
+            type="text"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            placeholder="Nickname (e.g. YouTube Premium)"
+            className="flex-1 bg-transparent border border-card-border rounded-lg py-2 px-3 text-sm outline-none focus:border-primary placeholder:text-foreground-muted/40"
+          />
+        </div>
+
         {/* Current auto-applied category */}
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-background-secondary">
           <span className="text-xs text-foreground-muted flex-shrink-0">Suggested:</span>
@@ -86,7 +99,7 @@ export function PatternReviewCard({ transaction: tx, onAccept, onChange, onSkip,
               return (
                 <button
                   key={s.category}
-                  onClick={() => onChange(s.category, s.subcategory ?? undefined)}
+                  onClick={() => onChange(s.category, s.subcategory ?? undefined, nickname || undefined)}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-card-border hover:border-card-border-hover hover:bg-background-secondary transition-colors"
                 >
                   <span className="text-[10px] font-medium text-foreground-muted/50">{i + 2}</span>
@@ -127,7 +140,7 @@ export function PatternReviewCard({ transaction: tx, onAccept, onChange, onSkip,
         </div>
 
         <button
-          onClick={onAccept}
+          onClick={() => onAccept(nickname || undefined)}
           disabled={isSubmitting}
           className="flex items-center gap-2 px-6 py-2.5 bg-foreground text-background rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-40"
         >
@@ -142,7 +155,7 @@ export function PatternReviewCard({ transaction: tx, onAccept, onChange, onSkip,
           <CategoryPicker
             selected={null}
             onSelect={(cat, sub) => {
-              onChange(cat, sub ?? undefined)
+              onChange(cat, sub ?? undefined, nickname || undefined)
               setShowPicker(false)
             }}
           />

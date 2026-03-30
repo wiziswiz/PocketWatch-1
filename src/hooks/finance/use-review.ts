@@ -68,6 +68,7 @@ export function useConfirmReview() {
       action: "accept" | "change" | "skip"
       category?: string
       subcategory?: string
+      nickname?: string
     }) => financeFetch<{ action: string; confidence?: number; category?: string }>(
       "/transactions/review/confirm",
       { method: "POST", body: JSON.stringify(data) }
