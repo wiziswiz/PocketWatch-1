@@ -118,7 +118,13 @@ export function classifyBillType(input: ClassifyInput): { billType: BillType; re
     return { billType: "subscription", reason: `Category "${input.category}" + ${input.frequency} frequency` }
   }
 
-  // 5. CC Payment — bank debits that pay a credit card (e.g. "CHASE CREDIT CRD DES:EPAY")
+  // 5. CC Payment — bank debits that pay a credit card
+  // Primary: Plaid category (machine-classified by Plaid, zero maintenance)
+  const isBank = ["depository", "checking", "savings"].includes(input.accountType ?? "")
+  if (input.category === "LOAN_PAYMENTS" && isBank) {
+    return { billType: "cc_payment", reason: "Plaid LOAN_PAYMENTS from bank account" }
+  }
+  // Fallback: string patterns for non-Plaid streams
   const CC_PAYMENT_PATTERNS = [
     "CREDIT CRD",          // Chase: "CHASE CREDIT CRD DES:EPAY"
     "CARD ONLINE DES:PAY", // Citi: "CITI CARD ONLINE DES:PAYMENT"
