@@ -8,15 +8,13 @@ import "leaflet/dist/leaflet.css"
 import { formatCurrency } from "@/lib/utils"
 import type { LocationPin } from "./where-ive-been-types"
 
-// Fix Leaflet default marker icons in Next.js bundling
-const defaultIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
+// Custom pin icon — primary color dot
+const pinIcon = L.divIcon({
+  className: "",
+  html: `<div style="width:14px;height:14px;border-radius:50%;background:var(--primary, #3b82f6);border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3)"></div>`,
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+  popupAnchor: [0, -10],
 })
 
 interface Props {
@@ -26,58 +24,62 @@ interface Props {
 export function WhereIveBeenMap({ locations }: Props) {
   const bounds = useMemo(() => {
     if (locations.length === 0) return null
-    return L.latLngBounds(
-      locations.map((l) => [l.lat, l.lon] as [number, number])
-    )
+    const b = L.latLngBounds(locations.map((l) => [l.lat, l.lon] as [number, number]))
+    return b.pad(0.15)
   }, [locations])
 
   if (locations.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-background-secondary/30 rounded-xl">
+      <div className="h-full flex items-center justify-center bg-background-secondary/30">
         <div className="text-center">
-          <span className="material-symbols-rounded text-foreground-muted/30 block mb-2" style={{ fontSize: 48 }}>map</span>
-          <p className="text-sm text-foreground-muted">No location data available</p>
+          <span className="material-symbols-rounded text-foreground-muted/20 block mb-2" style={{ fontSize: 48 }}>map</span>
+          <p className="text-sm text-foreground-muted">No location data yet</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="flex-1 rounded-xl overflow-hidden border border-card-border">
-      <MapContainer
-        bounds={bounds ?? undefined}
-        boundsOptions={{ padding: [40, 40] }}
-        center={bounds ? undefined : [20, 0]}
-        zoom={bounds ? undefined : 2}
-        className="h-full w-full"
-        style={{ minHeight: "400px" }}
-        scrollWheelZoom
+    <MapContainer
+      bounds={bounds ?? undefined}
+      boundsOptions={{ padding: [50, 50] }}
+      center={bounds ? undefined : [30, -20]}
+      zoom={bounds ? undefined : 3}
+      className="h-full w-full"
+      scrollWheelZoom
+      zoomControl
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://carto.com">CARTO</a>'
+        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+      />
+      <MarkerClusterGroup
+        chunkedLoading
+        maxClusterRadius={40}
+        spiderfyOnMaxZoom
+        showCoverageOnHover={false}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <MarkerClusterGroup chunkedLoading>
-          {locations.map((loc) => (
-            <Marker
-              key={`${loc.city}-${loc.country}`}
-              position={[loc.lat, loc.lon]}
-              icon={defaultIcon}
-            >
-              <Popup>
-                <div className="text-xs space-y-1 min-w-[140px]">
-                  <p className="font-bold text-sm">{loc.city}</p>
-                  <p className="text-foreground-muted">{loc.region ? `${loc.region}, ` : ""}{loc.country}</p>
-                  <div className="border-t pt-1 mt-1 space-y-0.5">
-                    <p>{loc.transactionCount} transaction{loc.transactionCount !== 1 ? "s" : ""}</p>
-                    <p className="font-semibold">{formatCurrency(loc.totalSpent)} spent</p>
-                  </div>
+        {locations.map((loc) => (
+          <Marker
+            key={`${loc.city}-${loc.country}-${loc.lat}`}
+            position={[loc.lat, loc.lon]}
+            icon={pinIcon}
+          >
+            <Popup closeButton={false} className="custom-popup">
+              <div style={{ minWidth: 160, fontFamily: "inherit" }}>
+                <p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 2px" }}>{loc.city}</p>
+                <p style={{ fontSize: 11, color: "#888", margin: "0 0 8px" }}>
+                  {loc.region ? `${loc.region}, ` : ""}{loc.country}
+                </p>
+                <div style={{ borderTop: "1px solid #eee", paddingTop: 6, display: "flex", justifyContent: "space-between", gap: 16 }}>
+                  <span style={{ fontSize: 11, color: "#666" }}>{loc.transactionCount} txn{loc.transactionCount !== 1 ? "s" : ""}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>{formatCurrency(loc.totalSpent)}</span>
                 </div>
-              </Popup>
-            </Marker>
-          ))}
-        </MarkerClusterGroup>
-      </MapContainer>
-    </div>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MarkerClusterGroup>
+    </MapContainer>
   )
 }
