@@ -115,6 +115,15 @@ export function PatternReviewCard({ transaction: tx, onAccept, onChange, onSkip,
           >
             Change <span className="text-[10px] opacity-60 ml-0.5">C</span>
           </button>
+          <a
+            href={`/finance/transactions?search=${encodeURIComponent(tx.cleanedName || tx.name)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-2 text-xs font-medium text-foreground-muted hover:text-foreground border border-card-border rounded-lg transition-colors inline-flex items-center gap-1"
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: 13 }}>open_in_new</span>
+            View Txn
+          </a>
         </div>
 
         <button
