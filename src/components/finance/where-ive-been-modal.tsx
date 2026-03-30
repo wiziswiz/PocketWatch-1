@@ -49,23 +49,23 @@ export function WhereIveBeenModal({ open, onClose }: Props) {
 
           {/* Modal */}
           <motion.div
-            className="relative w-full h-full max-w-[1440px] max-h-[900px] bg-card rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-card-border/50"
+            className="relative w-full h-full max-w-[1440px] max-h-[900px] bg-[#1a1a2e] rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-white/10"
             initial={{ scale: 0.92, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.92, opacity: 0, y: 20 }}
             transition={{ type: "spring", damping: 28, stiffness: 350, mass: 0.8 }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-card-border/50 bg-card z-10">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#1a1a2e] z-10">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <span className="material-symbols-rounded text-primary" style={{ fontSize: 20 }}>public</span>
+                <div className="w-9 h-9 rounded-xl bg-sky-400/20 flex items-center justify-center">
+                  <span className="material-symbols-rounded text-sky-400" style={{ fontSize: 20 }}>public</span>
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-foreground">Where I've Been</h2>
+                  <h2 className="text-base font-bold text-white">Where I've Been</h2>
                   {data && (
                     <motion.p
-                      className="text-[11px] text-foreground-muted"
+                      className="text-[11px] text-white/50"
                       initial={{ opacity: 0, y: -4 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.3 }}
@@ -77,7 +77,7 @@ export function WhereIveBeenModal({ open, onClose }: Props) {
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-background-secondary transition-colors"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors"
               >
                 <span className="material-symbols-rounded" style={{ fontSize: 18 }}>close</span>
               </button>
@@ -110,13 +110,13 @@ export function WhereIveBeenModal({ open, onClose }: Props) {
 
                 {/* Stats sidebar */}
                 <motion.div
-                  className="w-full lg:w-72 xl:w-80 border-t lg:border-t-0 lg:border-l border-card-border/50 flex flex-col max-h-[250px] lg:max-h-none bg-card"
+                  className="w-full lg:w-72 xl:w-80 border-t lg:border-t-0 lg:border-l border-white/10 flex flex-col max-h-[250px] lg:max-h-none bg-[#16162a]"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.35, duration: 0.3 }}
                 >
-                  <div className="px-4 py-3 border-b border-card-border/30 flex-shrink-0">
-                    <span className="text-[10px] font-semibold uppercase tracking-widest text-foreground-muted">By Country</span>
+                  <div className="px-4 py-3 border-b border-white/10 flex-shrink-0">
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-white/40">By Country</span>
                   </div>
                   <WhereIveBeenStats locations={data?.locations ?? []} />
                 </motion.div>

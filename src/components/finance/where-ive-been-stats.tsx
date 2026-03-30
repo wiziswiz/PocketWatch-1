@@ -52,25 +52,25 @@ export function WhereIveBeenStats({ locations }: Props) {
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="text-lg">{countryFlag(group.country)}</span>
-                <span className="text-sm font-semibold text-foreground">{group.country}</span>
+                <span className="text-sm font-semibold text-white">{group.country}</span>
               </div>
-              <span className="text-xs font-data font-semibold tabular-nums text-foreground">{formatCurrency(group.totalSpent)}</span>
+              <span className="text-xs font-data font-semibold tabular-nums text-sky-400">{formatCurrency(group.totalSpent)}</span>
             </div>
             <div className="space-y-1 ml-8">
               {group.cities.slice(0, 5).map((city) => (
                 <div key={`${city.city}-${city.country}`} className="flex items-center justify-between">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xs text-foreground truncate">{city.city}</span>
-                    {city.region && <span className="text-[10px] text-foreground-muted">{city.region}</span>}
+                    <span className="text-xs text-white/80 truncate">{city.city}</span>
+                    {city.region && <span className="text-[10px] text-white/30">{city.region}</span>}
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className="text-[10px] text-foreground-muted tabular-nums">{city.transactionCount} txns</span>
-                    <span className="text-xs font-data tabular-nums text-foreground">{formatCurrency(city.totalSpent)}</span>
+                    <span className="text-[10px] text-white/30 tabular-nums">{city.transactionCount} txns</span>
+                    <span className="text-xs font-data tabular-nums text-white/70">{formatCurrency(city.totalSpent)}</span>
                   </div>
                 </div>
               ))}
               {group.cities.length > 5 && (
-                <p className="text-[10px] text-foreground-muted/60 italic">+ {group.cities.length - 5} more cities</p>
+                <p className="text-[10px] text-white/25 italic">+ {group.cities.length - 5} more cities</p>
               )}
             </div>
           </div>

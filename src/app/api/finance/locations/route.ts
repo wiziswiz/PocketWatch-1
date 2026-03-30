@@ -23,7 +23,7 @@ export async function GET() {
     try {
       const transactions = await db.financeTransaction.findMany({
         where: { userId: user.id, isDuplicate: false, isExcluded: false },
-        select: { location: true, amount: true },
+        select: { location: true, amount: true, name: true },
       })
 
       const cityMap = new Map<string, { city: string; region: string | null; country: string; lat: number; lon: number; count: number; spent: number }>()
@@ -32,7 +32,18 @@ export async function GET() {
         const loc = tx.location as PlaidLocation | null
         if (!loc || !loc.city) continue
 
-        const country = loc.country ?? "US"
+        // Detect country: use Plaid's country, fall back to parsing transaction name for country codes
+        let country = loc.country ?? null
+        if (!country && tx.name) {
+          const nameUpper = (tx.name as string).toUpperCase()
+          const trailingCode = nameUpper.match(/\b([A-Z]{2})$/)
+          if (trailingCode) {
+            const code = trailingCode[1]
+            const validCountries = new Set(["GB", "FR", "DE", "IT", "ES", "NL", "CH", "AT", "JP", "KR", "SG", "HK", "TH", "AU", "NZ", "CA", "MX", "BR", "AR", "IE", "SE", "NO", "DK", "FI", "PT", "GR", "TR", "AE", "IL", "IN", "CN", "TW", "PH", "QA", "EG", "ZA", "KE", "MA", "CO", "PE", "CZ", "HU", "BE", "ID"])
+            if (validCountries.has(code)) country = code
+          }
+        }
+        if (!country) country = "US"
         let lat = loc.lat
         let lon = loc.lon
 
