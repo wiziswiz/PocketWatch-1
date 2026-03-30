@@ -247,21 +247,29 @@ export function parseBankCSV(csvContent: string, format?: string): ParsedTransac
 /**
  * Remove parsed transactions that likely already exist in the database.
  * Match by: same date + same amount + similar description (first 20 chars).
+ * Count-aware: if 3 identical charges exist in the DB and 5 come in, only 2 are new.
  */
 export function deduplicateTransactions(
   parsed: ParsedTransaction[],
   existingTxns: { date: Date; amount: number; name: string }[]
 ): ParsedTransaction[] {
+  // Count how many of each key exist in the DB
+  const existingCounts = new Map<string, number>()
+  for (const ex of existingTxns) {
+    const key = `${ex.date.toISOString().slice(0, 10)}|${ex.amount.toFixed(2)}|${ex.name.slice(0, 20).toLowerCase()}`
+    existingCounts.set(key, (existingCounts.get(key) ?? 0) + 1)
+  }
+
+  // Track how many of each key we've consumed (matched against existing)
+  const consumed = new Map<string, number>()
   return parsed.filter((p) => {
-    const pPrefix = p.description.slice(0, 20).toLowerCase()
-
-    return !existingTxns.some((ex) => {
-      const exDate = ex.date.toISOString().slice(0, 10)
-      if (p.date !== exDate) return false
-      if (Math.abs(p.amount - ex.amount) > 0.01) return false
-
-      const exPrefix = ex.name.slice(0, 20).toLowerCase()
-      return pPrefix === exPrefix
-    })
+    const key = `${p.date}|${p.amount.toFixed(2)}|${p.description.slice(0, 20).toLowerCase()}`
+    const dbCount = existingCounts.get(key) ?? 0
+    const used = consumed.get(key) ?? 0
+    if (used < dbCount) {
+      consumed.set(key, used + 1)
+      return false // This copy is already in the DB
+    }
+    return true // This is a genuinely new transaction
   })
 }
