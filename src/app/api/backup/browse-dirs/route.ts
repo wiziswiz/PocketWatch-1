@@ -60,13 +60,15 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({ path: toDisplay(resolvedSelected, home), cancelled: false })
     } catch (err: unknown) {
+      const exitCode = (err as { code?: number }).code
+      const stderr = (err as { stderr?: string }).stderr ?? ""
+      const msg = (err as Error).message ?? ""
+      console.error("[browse-dirs] osascript error:", { exitCode, stderr, msg })
       // osascript exit code 1 = user cancelled
-      if ((err as { code?: number }).code === 1) {
+      if (exitCode === 1 || stderr.includes("User canceled")) {
         return NextResponse.json({ cancelled: true })
       }
-      // If osascript itself fails (e.g. no GUI), return a helpful error
-      const msg = (err as Error).message ?? ""
-      return apiError("B5005", msg.includes("execution error") ? "Folder picker was cancelled" : "Failed to open folder picker", 500)
+      return apiError("B5005", `Folder picker failed: ${stderr || msg}`, 500)
     }
   }
 

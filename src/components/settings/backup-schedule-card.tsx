@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { cn, formatRelativeTime } from "@/lib/utils"
+import { csrfHeaders } from "@/lib/csrf-client"
 import { useBackupSchedule, useUpdateBackupSchedule } from "@/hooks/use-backup"
 
 export function BackupScheduleCard() {
@@ -37,7 +38,7 @@ export function BackupScheduleCard() {
     try {
       const res = await fetch("/api/backup/browse-dirs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: csrfHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ action: "pick", defaultPath: schedule?.directory ?? "~" }),
       })
       if (!res.ok) {
