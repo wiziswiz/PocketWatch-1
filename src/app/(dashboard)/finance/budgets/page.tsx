@@ -81,17 +81,19 @@ export default function FinanceBudgetsPage() {
     return { category: worst.category, overAmount: worst.spent - worst.monthlyLimit }
   }, [categoryData])
 
+  // Only subscription-like recurring charges — not generic bills (Sweetgreen, etc.)
+  const SUBSCRIPTION_TYPES = new Set(["subscription", "insurance", "membership"])
+  const isSubscription = (s: { status: string; billType?: string | null }) =>
+    s.status === "active" && SUBSCRIPTION_TYPES.has(s.billType ?? "")
   const activeSubs = useMemo(
     () => (subsData?.subscriptions ?? [])
-      .filter((s) => s.status === "active" && s.billType !== "bill")
+      .filter(isSubscription)
       .slice(0, 6)
       .map((s) => ({ merchantName: s.merchantName, amount: s.amount, logoUrl: s.logoUrl ?? null, category: s.category ?? null })),
     [subsData],
   )
   const subsMonthlyTotal = useMemo(
-    () => (subsData?.subscriptions ?? [])
-      .filter((s) => s.status === "active" && s.billType !== "bill")
-      .reduce((sum, s) => sum + s.amount, 0),
+    () => (subsData?.subscriptions ?? []).filter(isSubscription).reduce((sum, s) => sum + s.amount, 0),
     [subsData],
   )
 
