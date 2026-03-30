@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from "react"
 import {
   useCreditCards, useCardRecommendations, useFinanceAccounts,
   useSaveCreditCard, useCardStrategy, useToggleCardPerk,
-  useUpcomingBills, useFinanceSubscriptions, useLiabilities,
+  useUpcomingBills, useLiabilities,
   useAutoIdentifyCards,
   useAutoEnrichCards, useAllCardPerks,
 } from "@/hooks/use-finance"
@@ -33,7 +33,6 @@ export default function FinanceCardsPage() {
   // Also fetch next month for "upcoming" count — current month may have all-paid
   const nextMonth = (() => { const d = new Date(); d.setMonth(d.getMonth() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` })()
   const { data: nextMonthBills } = useUpcomingBills(nextMonth)
-  const { data: subs } = useFinanceSubscriptions()
   const saveCreditCard = useSaveCreditCard()
   const togglePerk = useToggleCardPerk()
   const { data: liabilities } = useLiabilities()
@@ -165,29 +164,14 @@ export default function FinanceCardsPage() {
   const utilization = totalLimit > 0 ? (totalBalance / totalLimit * 100) : 0
   const issuerCount = Object.keys(cardsByIssuer).length
 
-  // Bills stats
-  const allSubs = subs?.subscriptions ?? []
-  const activeSubs = allSubs.filter((s: { status: string }) => s.status === "active")
-  const toMonthly = (s: { frequency: string; amount: number }) => {
-    switch (s.frequency) {
-      case "weekly": return s.amount * 4.33
-      case "biweekly": return s.amount * 2.17
-      case "semi_monthly": return s.amount * 2
-      case "monthly": return s.amount
-      case "quarterly": return s.amount / 3
-      case "semi_annual": return s.amount / 6
-      case "yearly": return s.amount / 12
-      default: return s.amount
-    }
-  }
-  // Bills & subscriptions = all active subs (never includes cc_payment)
-  const obligationsTotal = activeSubs.reduce((sum: number, s: { frequency: string; amount: number }) => sum + toMonthly(s), 0)
-  // Card payments come from the bills API (where getCCBills() generates them)
-  const cardPaymentsMonthly = (billsData?.bills ?? [])
+  // Bills stats — both from the same source (bills API) for consistency
+  const allBills = billsData?.bills ?? []
+  const obligationsTotal = allBills
+    .filter((b) => b.billType !== "cc_payment")
+    .reduce((sum, b) => sum + b.amount, 0)
+  const cardPaymentsMonthly = allBills
     .filter((b) => b.billType === "cc_payment")
     .reduce((sum, b) => sum + b.amount, 0)
-
-  const allBills = billsData?.bills ?? []
   const thisMonthUpcoming = allBills.filter((b) => !b.isPaid)
   const paidBills = allBills.filter((b) => b.isPaid)
   // If current month has no upcoming, show next month's upcoming bills
