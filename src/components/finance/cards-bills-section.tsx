@@ -198,15 +198,7 @@ function BillListPanel({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [isAtBottom, setIsAtBottom] = useState(false)
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
-
-  const toggleCollapse = useCallback((type: string) => {
-    setCollapsed(prev => {
-      const next = new Set(prev)
-      next.has(type) ? next.delete(type) : next.add(type)
-      return next
-    })
-  }, [])
+  const [activeTab, setActiveTab] = useState("all")
 
   const checkScroll = useCallback(() => {
     const el = scrollRef.current
@@ -214,9 +206,7 @@ function BillListPanel({
     setIsAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 8)
   }, [])
 
-  useEffect(() => {
-    checkScroll()
-  }, [bills, checkScroll])
+  useEffect(() => { checkScroll() }, [bills, activeTab, checkScroll])
 
   const grouped = BILL_GROUPS
     .map(g => ({
@@ -226,15 +216,48 @@ function BillListPanel({
     }))
     .filter(g => g.items.length > 0)
 
+  const filteredBills = activeTab === "all"
+    ? bills
+    : bills.filter(b => (b.billType ?? "bill") === activeTab)
+
   return (
     <div
       className="bg-card border border-card-border rounded-xl overflow-hidden flex flex-col"
       style={maxHeight ? { maxHeight: maxHeight - 8 } : undefined}
     >
-      <div className="px-4 py-3 border-b border-card-border/50 flex items-center justify-between flex-shrink-0">
+      <div className="px-4 py-3 border-b border-card-border/50 flex-shrink-0 space-y-2.5">
         <span className="text-[10px] font-medium uppercase tracking-widest text-foreground-muted">
           {bills.length} Payment{bills.length !== 1 ? "s" : ""} This Month
         </span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setActiveTab("all")}
+            className={cn(
+              "px-2.5 py-1 rounded-full text-[10px] font-medium border transition-colors",
+              activeTab === "all"
+                ? "bg-primary/10 text-primary border-primary/30"
+                : "bg-card-border/20 text-foreground-muted border-card-border/50 hover:text-foreground"
+            )}
+          >
+            All ({bills.length})
+          </button>
+          {grouped.map(g => (
+            <button
+              key={g.type}
+              type="button"
+              onClick={() => setActiveTab(g.type)}
+              className={cn(
+                "px-2.5 py-1 rounded-full text-[10px] font-medium border transition-colors",
+                activeTab === g.type
+                  ? "bg-primary/10 text-primary border-primary/30"
+                  : "bg-card-border/20 text-foreground-muted border-card-border/50 hover:text-foreground"
+              )}
+            >
+              {g.label} ({g.items.length})
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="relative flex flex-col flex-1 min-h-0">
@@ -243,40 +266,39 @@ function BillListPanel({
           onScroll={checkScroll}
           className="overflow-y-auto flex-1 min-h-0"
         >
-          {bills.length === 0 ? (
+          {filteredBills.length === 0 ? (
             <p className="text-sm text-foreground-muted text-center py-8">No bills match your filters</p>
-          ) : grouped.map(group => (
-            <div key={group.type}>
-              <button
-                type="button"
-                onClick={() => toggleCollapse(group.type)}
-                className="w-full flex items-center justify-between px-4 py-2 hover:bg-background-secondary/30 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-rounded text-foreground-muted" style={{ fontSize: 14 }}>
-                    {collapsed.has(group.type) ? "chevron_right" : "expand_more"}
+          ) : activeTab === "all" ? (
+            grouped.map(group => (
+              <div key={group.type}>
+                <div className="flex items-center justify-between px-4 py-2 bg-background-secondary/30">
+                  <div className="flex items-center gap-2">
+                    <span className={cn("material-symbols-rounded", group.color)} style={{ fontSize: 14 }}>
+                      {group.icon}
+                    </span>
+                    <span className="text-xs font-semibold text-foreground">{group.label}</span>
+                    <span className="text-[10px] text-foreground-muted">({group.items.length})</span>
+                  </div>
+                  <span className="text-xs font-semibold tabular-nums text-foreground-muted">
+                    {formatCurrency(group.total)}
                   </span>
-                  <span className={cn("material-symbols-rounded", group.color)} style={{ fontSize: 14 }}>
-                    {group.icon}
-                  </span>
-                  <span className="text-xs font-semibold text-foreground">{group.label}</span>
-                  <span className="text-[10px] text-foreground-muted">({group.items.length})</span>
                 </div>
-                <span className="text-xs font-semibold tabular-nums text-foreground-muted">
-                  {formatCurrency(group.total)}
-                </span>
-              </button>
-              {!collapsed.has(group.type) && (
                 <div className="divide-y divide-card-border/30">
                   {group.items.map(bill => (
                     <BillRow key={bill.id} bill={bill} onClick={() => onSelectBill(bill)} />
                   ))}
                 </div>
-              )}
+              </div>
+            ))
+          ) : (
+            <div className="divide-y divide-card-border/30">
+              {filteredBills.map(bill => (
+                <BillRow key={bill.id} bill={bill} onClick={() => onSelectBill(bill)} />
+              ))}
             </div>
-          ))}
+          )}
         </div>
-        {!isAtBottom && bills.length > 0 && (
+        {!isAtBottom && filteredBills.length > 0 && (
           <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-card to-transparent pointer-events-none flex items-end justify-center pb-1">
             <span className="material-symbols-rounded text-foreground-muted/50 animate-bounce" style={{ fontSize: 14 }}>
               keyboard_arrow_down
